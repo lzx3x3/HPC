@@ -1,0 +1,8 @@
+#%Module
+module load git/2.13.4 python/3.6 /nv/coc-ice/tisaac3/opt/pace-ice/modulefiles/jupyter/1.0 gcc/4.9.0 mvapich2/2.3 cuda/9.0
+prepend-path PATH "/usr/local/pacerepov1//mvapich2/2.3b/gcc-4.9.4/bin"
+prepend-path LD_LIBRARY_PATH "/usr/local/pacerepov1//mvapich2/2.3b/gcc-4.9.4/lib"
+setenv MPI_HOME "/usr/local/pacerepov1/mvapich2/2.3b/gcc-4.9.4"
+setenv NCCL_HOME "/nv/coc-ice/tisaac3/opt/pace-ice/nccl/nccl_2.3.5-2+cuda9.0_x86_64"
+prepend-path LD_LIBRARY_PATH "/nv/coc-ice/tisaac3/opt/pace-ice/nccl/nccl_2.3.5-2+cuda9.0_x86_64/lib"
+setenv NCCL_TEST_DIR "/nv/coc-ice/tisaac3/opt/pace-ice/nccl-tests/build"

@@ -1,0 +1,3 @@
+#%Module
+module load git/2.13.4 python/3.6 /nv/coc-ice/tisaac3/opt/pace-ice/modulefiles/jupyter/1.0 intel/16.0 cuda/8.0.44 /nv/coc-ice/tisaac3/opt/pace-ice/modulefiles/hpctoolkit/2018.18 impi
+
