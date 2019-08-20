@@ -244,9 +244,9 @@ of up to 85% of the points it would have received if it were submitted on time.
 
 The final grade will be the maximum of the two grades.
 
-Please be aware that grades for this course are due on December 17, 2018 at
+Please be aware that grades for this course are due on December 16, 2019 at
 12:00 PM.  To allow for sufficient time to grade all assignments, all
-resubmissions that will be considered must be received by **December 13, 2018
+resubmissions that will be considered must be received by **December 12, 2019
 at 11:59 PM, EST**.
 
 Of course, extenuating circumstances and hardships will occur, which I will be
