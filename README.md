@@ -29,7 +29,7 @@ would like to work is a problem, come talk to me.
 
 ## Lectures
 
-Tuesdays & Thursdays, 9:30--10:45 a.m., [College of Computing Building 101](https://goo.gl/maps/BDfZxqEkXw32)
+Tuesdays & Thursdays, 9:30--10:45 a.m., [Van Leer C340](https://goo.gl/maps/ZRGcZLqjB9T2uTWX6)
 
 ## Description
 
@@ -44,7 +44,7 @@ can help.
 
 This course also teaches *how* to make your code better.  These days, making
 your code better almost always means taking fullest advantage of the
-*concurrency* in modern architectures.  This course is full of hands-on
+*concurrency* in modern architectures.  This course is hands-on
 experience with the software tools that turn efficient parallel algorithms into
 efficient parallel programs.
 
@@ -54,7 +54,7 @@ I want you to be able to:
 
 * *Design* high-performance code.  Good design requires good algorithms for
   the problem at hand -- the subject of other courses like [CSE 6220: Intro to
-  HPC](http://cse6220.gatech.edu/sp17-oms/) -- but also good understanding of
+  HPC](http://cse6220.gatech.edu/sp19-oms/) -- but also good understanding of
   the computer system being used in the form of *performance models*.  This
   course will discuss practical performance modeling of current architectures,
   including multi-core, coprocessor (e.g. GPUs) and many-core designs.
@@ -70,9 +70,10 @@ I want you to be able to:
   components of a computer system to identify bottlenecks and confirm whether
   the *implementation* matches the *design*.
 
+
 ## Prerequisite Courses and Skills
 
-[CS 3120] is listed as a prerequisite on OSCAR.
+[CS 3210] is listed as a prerequisite on OSCAR.
 Many of the concepts from that course listing (multi-threading, scheduling,
 synchronization, and communication) will be relevant to this course, but
 background references will be provided throughout.
@@ -84,9 +85,9 @@ in the hardware aspects of this course can peruse the materials for those
 courses for more depth.
 
 Code examples and assignments from this course will be written in compiled
-languages (C, C++, CUDA).  Most HPC computing systems run POSIX-y operating
+languages (C, C++, CUDA [although CUDA will be deemphasized in comparison to past years]).  Most HPC computing systems run POSIX-y operating
 systems, so basic comfort with command line tools is expected, and a
-willingness to learn new tools will make life a lot easier.
+willingness to learn new tools will make life a lot easier.  [PACE Training] has some slides under Linux 101/102 which may be helpful to those who are becoming comfortable with the command line.
 
 **This is not a course for learning compiled languages for the first time:** In
 this course, some assignments require you to write your code to match a given C
@@ -112,8 +113,8 @@ yourself, you will have a difficult time in this class.  Ideally, most of your t
 on assignments should be spent thinking about code *performance*, not code *correctness*.
 An alternative course to consider would be [CSE 6010]: Computational Problem Solving.
 
-[CS 3120]: https://oscar.gatech.edu/pls/bprod/bwckctlg.p_disp_course_detail?cat_term_in=201808&subj_code_in=CS&crse_numb_in=3210
-[CSE 6220]: http://cse6220.gatech.edu/sp18-oms/
+[CS 3210]: https://oscar.gatech.edu/pls/bprod/bwckschd.p_disp_detail_sched?term_in=201908&crn_in=91068
+[CSE 6220]: http://cse6220.gatech.edu/sp19-oms/
 [CS 6290]: http://www.omscs.gatech.edu/cs-6290-high-performance-computer-architecture/
 [CSE 6010]: https://oscar.gatech.edu/pls/bprod/bwckschd.p_disp_detail_sched?term_in=201808&crn_in=87078
 
@@ -133,7 +134,6 @@ The course will break down roughly into the following content modules.
   * Tools:
     - compilers
     - hardware counters
-    - basic CUDA
 
 2.
 
