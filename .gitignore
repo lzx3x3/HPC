@@ -1,0 +1,7 @@
+.ipynb_checkpoints
+syllabus.pdf
+*.o
+*.optrpt
+jupyter.*.log
+jupyter.o*
+hpctoolkit-*
