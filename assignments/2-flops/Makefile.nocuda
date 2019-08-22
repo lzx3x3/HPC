@@ -1,0 +1,42 @@
+
+all: fma_prof fma_prof_opt
+
+CC = icc
+COPTFLAGS = -O3 -xHost -qopt-report=5
+OMPFLAGS = -qopenmp
+CFLAGS = -g -Wall -std=c99 -fPIC
+CPPFLAGS = 
+LIBS = 
+RM = rm -f
+LINKER = icpc $(OMPFLAGS)
+
+%.o: %.c
+	$(CC) $(CFLAGS) $(COPTFLAGS) $(CPPFLAGS) $(OMPFLAGS) -c -o $@ $<
+
+fma_prof_nocuda: fma_prof_nocuda.o fma_omp.o fma_loop_host.o
+	$(LINKER) -o $@ $^ -Wl,-rpath,.
+
+fma_prof_nocuda_opt: fma_prof_nocuda.o fma_omp.o fma_loop_host_opt.o
+	$(LINKER) -o $@ $^ -Wl,-rpath,.
+
+Nh = $(shell echo $$(( $(PBS_NP) * 256 )))
+Nd = 256
+T = 1048576
+b = 0.5
+c = 3.0
+Bs = -1
+Gs = -1
+
+PERF =
+OMPENV = OMP_PROC_BIND=spread OMP_NUM_THREADS=$(PBS_NP)
+
+run_fma_prof: fma_prof_nocuda
+	$(OMPENV) $(PERF) ./fma_prof_nocuda $(Nh) $(Nd) $(Bs) $(Gs) $(T) $(b) $(c)
+
+run_fma_prof_opt: fma_prof_nocuda_opt
+	$(OMPENV) $(PERF) ./fma_prof_nocuda_opt $(Nh) $(Nd) $(Bs) $(Gs) $(T) $(b) $(c)
+
+clean:
+	$(RM) *.o *.optrpt *.so fma_prof fma_prof_opt
+
+.PHONY: clean run_fma_prof
