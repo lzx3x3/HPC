@@ -12,7 +12,6 @@ NVCCFLAGS = -lineinfo -Xcompiler '-fPIC'
 CUOPTFLAGS = -O
 RM = rm -f
 LINKER = icpc $(OMPFLAGS)
-OMPENV = OMP_NUM_THREADS=$(PBS_NP)
 
 all: stream cloud
 
@@ -36,11 +35,11 @@ PERF =
 STREAM_N = 1000000
 runstream:
 	$(CC) $(CFLAGS) $(COPTFLAGS) $(CPPFLAGS) $(OMPFLAGS) -o stream stream.c -DSTREAM_ARRAY_SIZE=$(STREAM_N)
-	$(OMPENV) $(PERF) ./stream
+	$(PERF) ./stream
 
 runstream2:
 	$(CC) $(CFLAGS) $(COPTFLAGS) $(CPPFLAGS) $(OMPFLAGS) -o stream2 stream2.c -DSTREAM_ARRAY_SIZE=$(STREAM_N)
-	$(OMPENV) $(PERF) ./stream2
+	$(PERF) ./stream2
 
 runstreamcu:
 	$(NVCC) $(NVCCFLAGS) $(CUOPTFLAGS) -o streamcu stream.cu -DSTREAM_ARRAY_SIZE=$(STREAM_N)
@@ -59,7 +58,7 @@ runcloud:
 	$(RM) cloud cloud.o verlet.o
 	$(MAKE) verlet.o DEFINES="-DNT=$(NCHUNK)"
 	$(MAKE) cloud
-	$(OMPENV) $(PERF) ./cloud $(NPOINT) $(NT) $(DT) $(NCHUNK)
+	$(PERF) ./cloud $(NPOINT) $(NT) $(DT) $(NCHUNK)
 
 clean:
 	$(RM) *.o cloud stream stream2 streamcu streamcu2
