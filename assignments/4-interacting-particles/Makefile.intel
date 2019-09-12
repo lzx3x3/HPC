@@ -1,0 +1,6 @@
+
+CC = icc
+COPTFLAGS = -O3 -xHost -qopt-report=5
+OMPFLAGS =
+CFLAGS = -g -Wall -fPIC
+

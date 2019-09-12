@@ -1,0 +1,5 @@
+
+CC = gcc -std=c99
+COPTFLAGS = -O3 -march=native
+OMPFLAGS =
+CFLAGS = -g -Wall -fPIC
