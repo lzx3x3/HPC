@@ -76,7 +76,7 @@ main (int argc, char **argv)
   printf ("[%s]: %e elapsed seconds\n", argv[0], time_diff);
 #endif
 
-  num_flops = (size_t) (Nh + Nd * numDevices) * (size_t) T * 2;
+  num_flops = (size_t) (Nh + (size_t) Nd * numDevices) * (size_t) T * 2;
   printf ("[%s]: %zu flops executed\n", argv[0], num_flops);
 #if defined (_OPENMP)
   printf ("[%s]: %e flop/s\n", argv[0], (double) num_flops / time_diff);

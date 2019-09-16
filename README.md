@@ -7,7 +7,7 @@
 | *name*   | Toby Isaac                                                                  | Han Sol Suh                                                   |
 | *email*  | [tisaac@cc.gatech.edu](mailto:tisaac@cc.gatech.edu)                         | [hsuh7@gatech.edu](hsuh7@gatech.edu)                          |
 | *office* | [CODA S1323](https://goo.gl/maps/TsqtUC4uq4QicmpDA)                         |                                                               |
-| *hours*  | [KACB 1340](https://goo.gl/maps/m734B8VHL4WSVpeR9), Mondays & Fridays, 9-10 | [KACB CSE Common Area](https://goo.gl/38x6QB), Wednesdays 1-2 |
+| *hours*  | [KACB 1340](https://goo.gl/maps/m734B8VHL4WSVpeR9), Mondays 2:45-3:45, Fridays 9-10 | [KACB CSE Common Area](https://goo.gl/38x6QB), Wednesdays 1-2 |
 
 ## Websites
 
