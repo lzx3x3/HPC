@@ -5,7 +5,7 @@ double
 compute_hamiltonian (int Np, double k, const double *X[3], const double *U[3])
 {
   double h = 0.;
-
+  #pragma omp parallel for
   for (int i = 0; i < Np; i++) { /* for every particle */
     h += 0.5 * (U[0][i]*U[0][i] + U[1][i]*U[1][i] + U[2][i]*U[2][i]); /* kinetic energy */
     if (k) {

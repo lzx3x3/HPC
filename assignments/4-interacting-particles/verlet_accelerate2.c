@@ -5,6 +5,7 @@
 void
 verlet_step_accelerate (int Np, double dt, const double *restrict X[3], double *restrict U[3])
 {
+  #pragma omp parallel for
   for (int i = 0; i < Np; i++) {
     for (int j = i + 1; j < Np; j++) {
       double du[3];

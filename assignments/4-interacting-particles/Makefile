@@ -6,7 +6,8 @@ DEFINES =
 RM = rm -f
 LIBS = -lm -lrt
 LINKER = $(CC)
-
+LINKER = icpc $(OMPFLAGS)
+OMPFLAGS = -qopenmp
 all: cloud cloud2
 
 %.o: %.c

@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workbench progressCount="1" version="2.0">
+<workbenchAdvisor/>
+<window height="991" width="1321" x="296" y="0">
+<fastViewData fastViewLocation="1024"/>
+<perspectiveBar/>
+<coolbarLayout>
+<coolItem id="org.eclipse.ui.edit.text.actionSet.annotationNavigation" itemType="typeToolBarContribution" x="0" y="30"/>
+<coolItem id="org.eclipse.ui.edit.text.actionSet.navigation" itemType="typeToolBarContribution" x="40" y="30"/>
+</coolbarLayout>
+<page focus="true" label="&lt;Unknown Label&gt; - hpcviewer">
+<editors>
+<editorArea activeWorkbook="DefaultEditorWorkbook">
+<info part="DefaultEditorWorkbook">
+<folder appearance="1" expanded="2">
+<presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory"/>
+</folder>
+</info>
+</editorArea>
+</editors>
+<views/>
+<perspectives activePerspective="edu.rice.cs.hpc.perspective">
+<perspective editorAreaTrimState="2" editorAreaVisible="1" fixed="0" version="0.016">
+<descriptor class="edu.rice.cs.hpc.viewer.framework.Perspective" id="edu.rice.cs.hpc.perspective" label="hpcviewer"/>
+<alwaysOnActionSet id="org.eclipse.ui.edit.text.actionSet.annotationNavigation"/>
+<alwaysOnActionSet id="org.eclipse.ui.edit.text.actionSet.navigation"/>
+<alwaysOnActionSet id="org.eclipse.ui.edit.text.actionSet.convertLineDelimitersTo"/>
+<alwaysOnActionSet id="org.eclipse.ui.actionSet.keyBindings"/>
+<alwaysOnActionSet id="org.eclipse.ui.actionSet.openFiles"/>
+<hide_toolbar_item_id id="org.eclipse.ui.edit.text.toggleShowSelectedElementOnly"/>
+<fastViewBars/>
+<layout>
+<mainWindow>
+<info part="org.eclipse.ui.editorss"/>
+<info folder="true" part="stickyFolderRight" ratio="0.7495049" ratioLeft="757" ratioRight="253" relationship="2" relative="org.eclipse.ui.editorss">
+<folder appearance="2" expanded="2">
+<page content="org.eclipse.ui.internal.introview" label="LabelNotFound"/>
+</folder>
+</info>
+<info folder="true" part="metricViews0" ratio="0.32408434" ratioLeft="292" ratioRight="609" relationship="4" relative="org.eclipse.ui.editorss">
+<folder appearance="2" expanded="2">
+<page content="edu.rice.cs.hpc.viewer.scope.ScopeView:0" label="LabelNotFound"/>
+<page content="edu.rice.cs.hpc.viewer.scope.CallerScopeView:0" label="LabelNotFound"/>
+<page content="edu.rice.cs.hpc.viewer.scope.FlatScopeView:0" label="LabelNotFound"/>
+<presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory"/>
+</folder>
+</info>
+<info folder="true" part="metricViews1" ratio="0.3" ratioLeft="303" ratioRight="707" relationship="2" relative="metricViews0">
+<folder appearance="2" expanded="2">
+<page content="edu.rice.cs.hpc.viewer.scope.ScopeView:1" label="LabelNotFound"/>
+<page content="edu.rice.cs.hpc.viewer.scope.CallerScopeView:1" label="LabelNotFound"/>
+<page content="edu.rice.cs.hpc.viewer.scope.FlatScopeView:1" label="LabelNotFound"/>
+<presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory"/>
+</folder>
+</info>
+<info folder="true" part="metricViews2" ratio="0.29985857" ratioLeft="212" ratioRight="495" relationship="2" relative="metricViews1">
+<folder appearance="2" expanded="2">
+<page content="edu.rice.cs.hpc.viewer.scope.ScopeView:2" label="LabelNotFound"/>
+<page content="edu.rice.cs.hpc.viewer.scope.CallerScopeView:2" label="LabelNotFound"/>
+<page content="edu.rice.cs.hpc.viewer.scope.FlatScopeView:2" label="LabelNotFound"/>
+<presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory"/>
+</folder>
+</info>
+<info folder="true" part="metricViews3" ratio="0.2989899" ratioLeft="148" ratioRight="347" relationship="2" relative="metricViews2">
+<folder appearance="2" expanded="2">
+<page content="edu.rice.cs.hpc.viewer.scope.ScopeView:3" label="LabelNotFound"/>
+<page content="edu.rice.cs.hpc.viewer.scope.CallerScopeView:3" label="LabelNotFound"/>
+<page content="edu.rice.cs.hpc.viewer.scope.FlatScopeView:3" label="LabelNotFound"/>
+<presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory"/>
+</folder>
+</info>
+<info folder="true" part="metricViews4" ratio="0.29971182" ratioLeft="104" ratioRight="243" relationship="2" relative="metricViews3">
+<folder appearance="2" expanded="2">
+<page content="edu.rice.cs.hpc.viewer.scope.ScopeView:4" label="LabelNotFound"/>
+<page content="edu.rice.cs.hpc.viewer.scope.CallerScopeView:4" label="LabelNotFound"/>
+<page content="edu.rice.cs.hpc.viewer.scope.FlatScopeView:4" label="LabelNotFound"/>
+<presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory"/>
+</folder>
+</info>
+</mainWindow>
+</layout>
+</perspective>
+</perspectives>
+<workingSets/>
+<navigationHistory/>
+</page>
+<workbenchWindowAdvisor/>
+<actionBarAdvisor/>
+<trimLayout>
+<trimArea IMemento.internal.id="1024">
+<trimItem IMemento.internal.id="org.eclipse.jface.action.StatusLineManager"/>
+<trimItem IMemento.internal.id="org.eclipse.ui.internal.HeapStatus"/>
+<trimItem IMemento.internal.id="org.eclipse.ui.internal.progress.ProgressRegion"/>
+</trimArea>
+</trimLayout>
+</window>
+<mruList/>
+</workbench>
