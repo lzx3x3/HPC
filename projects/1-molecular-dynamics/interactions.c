@@ -47,7 +47,7 @@ IXCreate (double L, int boxdim, int maxNx, IX *ix_p)
 {
   IX ix;
   int err;
-
+  
   if (boxdim < 4) /* need at least four boxes in each direction */
   {
     boxdim = 4;
@@ -76,6 +76,7 @@ IXDestroy (IX *ix_p)
   int boxdim = (*ix_p)->boxdim;
 
   free ((*ix_p)->pairs);
+  //#pragma omp parallel for //I changed this line
   for (int i = 0; i < boxdim; i++) {
     for (int j = 0; j < boxdim; j++) {
       free((*ix_p)->boxes[i][j]);
@@ -171,7 +172,7 @@ IXGetPairs(IX ix, Vector X, double r, int *Npairs, ix_pair **pairs)
   int neigh_idx, neigh_idy, neigh_idz;
   int *next;
   box *bp, *neigh_bp;
-
+  //#pragma omp parallel for // I added this line
   for (int i = 0; i < boxdim; i++) {
     for (int j = 0; j < boxdim; j++) {
       for (int k = 0; k < boxdim; k++) {
@@ -183,6 +184,7 @@ IXGetPairs(IX ix, Vector X, double r, int *Npairs, ix_pair **pairs)
   err = safeMALLOC(Np * sizeof(int), &next);CHK(err);
 
   // traverse all particles and assign to boxes
+  //#pragma omp parallel for //I added this line
   for (int i=0; i<Np; i++)
   {
     double pos_p[3];

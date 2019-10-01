@@ -61,7 +61,7 @@ accelerate_ix (Accel accel, Vector X, Vector U)
   double L = accel->L;
   double k = accel->k;
   double r = accel->r;
-
+  #pragma omp parallel for // I added this 
   for (int i = 0; i < Np; i++) {
     for (int j = 0; j < 3; j++) {
       IDX(U,j,i) = 0.;
@@ -69,6 +69,7 @@ accelerate_ix (Accel accel, Vector X, Vector U)
   }
 
   IXGetPairs (ix, X, 2.*r, &Npairs, &pairs);
+  #pragma omp parallel for // I added this 
   for (int p = 0; p < Npairs; p++) {
     int i = pairs[p].p[0];
     int j = pairs[p].p[1];
