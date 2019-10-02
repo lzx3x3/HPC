@@ -185,7 +185,6 @@ IXGetPairs(IX ix, Vector X, double r, int *Npairs, ix_pair **pairs)
   err = safeMALLOC(Np * sizeof(int), &next);CHK(err);
 
   // traverse all particles and assign to boxes
-  #pragma omp parallel for default(shared) private (idx,idy,idz,bp)//I added this line, private variables idx,idy,idz
   for (int i=0; i<Np; i++)
   {
     double pos_p[3];
@@ -204,10 +203,9 @@ IXGetPairs(IX ix, Vector X, double r, int *Npairs, ix_pair **pairs)
 
     // add to beginning of implied linked list
     bp = &b[idx][idy][idz];
-    #pragma omp critical // I added this line, to protect for updating
-   {
+   
     next[i] = bp->head;
-    bp->head = i;}
+    bp->head = i;
   }
 
   int p1, p2;
