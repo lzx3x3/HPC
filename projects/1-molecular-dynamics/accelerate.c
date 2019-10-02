@@ -78,7 +78,9 @@ accelerate_ix (Accel accel, Vector X, Vector U)
     force (k, r, L, IDX(X,0,i), IDX(X,1,i), IDX(X,2,i), IDX(X,0,j), IDX(X,1,j), IDX(X,2,j), du);
 
     for (int d = 0; d < 3; d++) {
+      #pragma omp atomic update // I added this line for the protection of update to avoid racing
       IDX(U,d,i) += du[d];
+      #pragma omp atomic update //I added this line for the protection of update to avoid racing
       IDX(U,d,j) -= du[d];
     }
   }

@@ -95,6 +95,12 @@
 </trimLayout>
 </window>
 <mruList>
+<file factoryID="org.eclipse.ui.ide.FileStoreEditorInputFactory" id="edu.rice.cs.hpc.viewer.util.SourceCodeEditor" name="interactions.c" tooltip="/nv/coc-ice/mguo34/cse6230/projects/1-molecular-dynamics/hpctoolkit-cloud-database-108355.ice-sched.pace.gatech.edu/src/nv/coc-ice/mguo34/cse6230/projects/1-molecular-dynamics/interactions.c">
+<persistable uri="file:/nv/coc-ice/mguo34/cse6230/projects/1-molecular-dynamics/hpctoolkit-cloud-database-108355.ice-sched.pace.gatech.edu/src/nv/coc-ice/mguo34/cse6230/projects/1-molecular-dynamics/interactions.c"/>
+</file>
+<file factoryID="org.eclipse.ui.ide.FileStoreEditorInputFactory" id="edu.rice.cs.hpc.viewer.util.SourceCodeEditor" name="accelerate.c" tooltip="/nv/coc-ice/mguo34/cse6230/projects/1-molecular-dynamics/hpctoolkit-cloud-database-108355.ice-sched.pace.gatech.edu/src/nv/coc-ice/mguo34/cse6230/projects/1-molecular-dynamics/accelerate.c">
+<persistable uri="file:/nv/coc-ice/mguo34/cse6230/projects/1-molecular-dynamics/hpctoolkit-cloud-database-108355.ice-sched.pace.gatech.edu/src/nv/coc-ice/mguo34/cse6230/projects/1-molecular-dynamics/accelerate.c"/>
+</file>
 <file factoryID="org.eclipse.ui.ide.FileStoreEditorInputFactory" id="edu.rice.cs.hpc.viewer.util.SourceCodeEditor" name="interactions.c" tooltip="/nv/coc-ice/mguo34/cse6230/projects/1-molecular-dynamics/hpctoolkit-cloud-database-108353.ice-sched.pace.gatech.edu/src/nv/coc-ice/mguo34/cse6230/projects/1-molecular-dynamics/interactions.c">
 <persistable uri="file:/nv/coc-ice/mguo34/cse6230/projects/1-molecular-dynamics/hpctoolkit-cloud-database-108353.ice-sched.pace.gatech.edu/src/nv/coc-ice/mguo34/cse6230/projects/1-molecular-dynamics/interactions.c"/>
 </file>

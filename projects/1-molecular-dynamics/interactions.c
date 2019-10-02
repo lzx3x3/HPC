@@ -47,7 +47,7 @@ IXCreate (double L, int boxdim, int maxNx, IX *ix_p)
 {
   IX ix;
   int err;
-  
+  boxdim = 8;//I added this line
   if (boxdim < 4) /* need at least four boxes in each direction */
   {
     boxdim = 4;
@@ -76,7 +76,7 @@ IXDestroy (IX *ix_p)
   int boxdim = (*ix_p)->boxdim;
 
   free ((*ix_p)->pairs);
-  //#pragma omp parallel for //I changed this line
+  #pragma omp parallel for //I changed this line
   for (int i = 0; i < boxdim; i++) {
     for (int j = 0; j < boxdim; j++) {
       free((*ix_p)->boxes[i][j]);
@@ -129,6 +129,7 @@ interactions_check(IX ix, Vector X, double r, int Npairs, ix_pair *pairs, int *t
       double dist2 = dist_and_disp (IDX(X,0,i),IDX(X,1,i),IDX(X,2,i),
                                     IDX(X,0,j),IDX(X,1,j),IDX(X,2,j), L,
                                     &dx, &dy, &dz);
+     
       if (dist2 < r2) {
         intcount++;
         int k;
@@ -172,7 +173,7 @@ IXGetPairs(IX ix, Vector X, double r, int *Npairs, ix_pair **pairs)
   int neigh_idx, neigh_idy, neigh_idz;
   int *next;
   box *bp, *neigh_bp;
-  //#pragma omp parallel for // I added this line
+  #pragma omp parallel for// I added this line
   for (int i = 0; i < boxdim; i++) {
     for (int j = 0; j < boxdim; j++) {
       for (int k = 0; k < boxdim; k++) {
@@ -184,7 +185,7 @@ IXGetPairs(IX ix, Vector X, double r, int *Npairs, ix_pair **pairs)
   err = safeMALLOC(Np * sizeof(int), &next);CHK(err);
 
   // traverse all particles and assign to boxes
-  //#pragma omp parallel for //I added this line
+  #pragma omp parallel for default(shared) private (idx,idy,idz,bp)//I added this line, private variables idx,idy,idz
   for (int i=0; i<Np; i++)
   {
     double pos_p[3];
@@ -203,14 +204,17 @@ IXGetPairs(IX ix, Vector X, double r, int *Npairs, ix_pair **pairs)
 
     // add to beginning of implied linked list
     bp = &b[idx][idy][idz];
+    #pragma omp critical // I added this line, to protect for updating
+   {
     next[i] = bp->head;
-    bp->head = i;
+    bp->head = i;}
   }
 
   int p1, p2;
   double d2, dx, dy, dz;
-
+  
   IXClearPairs(ix);
+  #pragma omp parallel for collapse(3) default(shared) private (p1,p2,d2,dx,dy,dz,idx,idy,idz,bp,neigh_idx,neigh_idy,neigh_idz,neigh_bp)
   for (idx=0; idx<boxdim; idx++)
   {
     for (idy=0; idy<boxdim; idy++)
@@ -218,20 +222,25 @@ IXGetPairs(IX ix, Vector X, double r, int *Npairs, ix_pair **pairs)
       for (idz=0; idz<boxdim; idz++)
       {
         bp = &b[idx][idy][idz];
-
+     
+  
         // within box interactions
+        
         p1 = bp->head;
         while (p1 != -1)
         {
+         
           p2 = next[p1];
           while (p2 != -1)
           {
+            
             d2 = dist_and_disp(IDX(X,0,p1),IDX(X,1,p1),IDX(X,2,p1),
                                IDX(X,0,p2),IDX(X,1,p2),IDX(X,2,p2), L,
                                &dx, &dy, &dz);
 
             if (d2 < cutoff2)
             {
+              #pragma omp critical //I added this line to protect updating
               IXPushPair(ix,p1,p2);
             }
 
@@ -239,7 +248,7 @@ IXGetPairs(IX ix, Vector X, double r, int *Npairs, ix_pair **pairs)
           }
           p1 = next[p1];
         }
-
+    
         // interactions with other boxes
         for (int j=0; j<NUM_BOX_NEIGHBORS; j++)
         {
@@ -248,10 +257,11 @@ IXGetPairs(IX ix, Vector X, double r, int *Npairs, ix_pair **pairs)
           neigh_idz = (idz + box_neighbors[j][2] + boxdim) % boxdim;
 
           neigh_bp = &b[neigh_idx][neigh_idy][neigh_idz];
-
+          
           p1 = neigh_bp->head;
           while (p1 != -1)
           {
+            
             p2 = bp->head;
             while (p2 != -1)
             {
@@ -261,6 +271,7 @@ IXGetPairs(IX ix, Vector X, double r, int *Npairs, ix_pair **pairs)
 
               if (d2 < cutoff2)
               {
+                #pragma omp critical //I added this line to protect updating
                 IXPushPair(ix,p1,p2);
               }
 
@@ -274,7 +285,7 @@ IXGetPairs(IX ix, Vector X, double r, int *Npairs, ix_pair **pairs)
   }
 
   free(next);
-
+ 
   *Npairs = ix->curNx;
   *pairs = ix->pairs;
 
