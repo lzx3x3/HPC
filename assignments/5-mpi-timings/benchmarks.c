@@ -186,7 +186,7 @@ int main(int argc, char **argv)
     err = splitCommunicator(MPI_COMM_WORLD, numComm, &subComm); MPI_CHK(err);
     for (int numBytes = 8; numBytes <= maxCollectiveSize; numBytes *= 8) {
       double        timeAvg = 0.;
-      long long int totalNumBytes = numBytes * (numComm - 1);
+      long long int totalNumBytes = numBytes * (numComm - 1) * 2;
 
       /* TODO: Set up a ping pong test for the scatter collective.  When
        * you broadcast the 'ping' message, use the subComm communicator to
@@ -209,7 +209,7 @@ int main(int argc, char **argv)
     err = splitCommunicator(MPI_COMM_WORLD, numComm, &subComm); MPI_CHK(err);
     for (int numBytes = 8; numBytes <= maxSize; numBytes *= 8) {
       double        timeAvg = 0.;
-      long long int totalNumBytes = numBytes * ((numComm - 1) * 2);
+      long long int totalNumBytes = numBytes * (numComm - 1) * 2;
 
       /* TODO: Set up a timing loop for the following:
        *
@@ -231,7 +231,7 @@ int main(int argc, char **argv)
     err = splitCommunicator(MPI_COMM_WORLD, numComm, &subComm); MPI_CHK(err);
     for (int numBytes = 8; numBytes <= maxCollectiveSize; numBytes *= 8) {
       double        timeAvg = 0.;
-      long long int totalNumBytes = numBytes * ((numComm - 1) * numComm);
+      long long int totalNumBytes = numBytes * (numComm - 1) * numComm;
 
       /* TODO: Set up a timing loop for the following:
        *
