@@ -37,31 +37,25 @@ import sys
 with sys.stdin as f:
     line = f.readline()
     while line:
-        if line.startswith("MPI Point-to-point test:"):
-            (data, line) = parse_benchmarks_data(f, "Send/Recv")
+        if line.startswith("MPI Point-to-point ping-pong test:"):
+            (data, line) = parse_benchmarks_data(f, "Send")
             lines.append(data)
-        elif line.startswith("MPI Point-to-point synchronous test:"):
-            (data, line) = parse_benchmarks_data(f, "Ssend/Recv")
+        elif line.startswith("MPI Point-to-point synchronous ping-pong test:"):
+            (data, line) = parse_benchmarks_data(f, "Ssend")
             lines.append(data)
-        elif line.startswith("MPI One-to-all broadcast test:"):
+        elif line.startswith("MPI Broadcast ping-pong test:"):
             (data, line) = parse_benchmarks_data(f, "Bcast")
             lines.append(data)
-        elif line.startswith("MPI One-to-all scatter test:"):
+        elif line.startswith("MPI Scatter ping-pong test:"):
             (data, line) = parse_benchmarks_data(f, "Scatter")
             lines.append(data)
-        elif line.startswith("MPI All-to-one reduce test:"):
-            (data, line) = parse_benchmarks_data(f, "Reduce")
-            lines.append(data)
-        elif line.startswith("MPI All-to-one gather test:"):
-            (data, line) = parse_benchmarks_data(f, "Gather")
-            lines.append(data)
-        elif line.startswith("MPI All-to-all reduce test:"):
-            (data, line) = parse_benchmarks_data(f, "Allreduce")
-            lines.append(data)
-        elif line.startswith("MPI All-to-all gather test:"):
+        elif line.startswith("MPI All-gather test:"):
             (data, line) = parse_benchmarks_data(f, "Allgather")
             lines.append(data)
-        elif line.startswith("MPI All-to-all transpose test:"):
+        elif line.startswith("MPI All-reduce test:"):
+            (data, line) = parse_benchmarks_data(f, "Allreduce")
+            lines.append(data)
+        elif line.startswith("MPI All-to-all test:"):
             (data, line) = parse_benchmarks_data(f, "Alltoall")
             lines.append(data)
         else:

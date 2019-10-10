@@ -132,12 +132,12 @@ int main(int argc, char **argv)
           err = startTime(&tic); MPI_CHK(err);
         }
         if (rank < numComm) {
-          if (rank % 2) {
-            err = MPI_Send(buffer, numBytes, MPI_BYTE, rank - 1, 0, subComm); MPI_CHK(err);
-            err = MPI_Recv(buffer, numBytes, MPI_BYTE, rank - 1, 0, subComm, MPI_STATUS_IGNORE); MPI_CHK(err);
+          if (rank < numComm / 2) {
+            err = MPI_Send(buffer, numBytes, MPI_BYTE, rank + numComm / 2, 0, subComm); MPI_CHK(err);
+            err = MPI_Recv(buffer, numBytes, MPI_BYTE, rank + numComm / 2, 0, subComm, MPI_STATUS_IGNORE); MPI_CHK(err);
           } else {
-            err = MPI_Recv (buffer, numBytes, MPI_BYTE, rank + 1, 0, subComm, MPI_STATUS_IGNORE); MPI_CHK(err);
-            err = MPI_Send (buffer, numBytes, MPI_BYTE, rank + 1, 0, subComm); MPI_CHK(err);
+            err = MPI_Recv (buffer, numBytes, MPI_BYTE, rank - numComm / 2, 0, subComm, MPI_STATUS_IGNORE); MPI_CHK(err);
+            err = MPI_Send (buffer, numBytes, MPI_BYTE, rank - numComm / 2, 0, subComm); MPI_CHK(err);
           }
         }
       }
