@@ -1,10 +1,10 @@
 
-OMPFLAGS = -qopenmp
+OMPFLAGS = -fopenmp
 MPICC    = mpicc $(OMPFLAGS)
-CFLAGS   = -g -Wall -O3 -xHost -std=c99
+CFLAGS   = -g -Wall -O3 -std=c99
 CPPFLAGS = -I../../utils
 LIBS     =
-NODEFILEFLG = -f ${PBS_NODEFILE}
+NODEFILEFLAG = -f ${PBS_NODEFILE}
 
 MPIRUN    = mpirun
 N         = ${PBS_NP}
@@ -21,7 +21,7 @@ benchmarks: benchmarks.o
 	$(MPICC) -o $@ $^ $(LIBS)
 
 runbenchmarks: benchmarks
-	$(MPIRUNCMD) -n $(N) ./benchmarks | xvfb-run python figgen.py
+	$(MPIRUNCMD) $(NODEFILEFLAG) -n $(N) ./benchmarks | xvfb-run python figgen.py
 
 clean:
 	$(RM) *.o benchmarks
