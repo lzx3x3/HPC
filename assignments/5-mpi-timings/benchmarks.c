@@ -245,7 +245,7 @@ int main(int argc, char **argv)
   }
 
   /* === ALL TO ALL === */
-  MPI_LOG(rank, "MPI All-to-all transpose test:\n"
+  MPI_LOG(rank, "MPI All-to-all test:\n"
           " # Processes  | Message Size | Total Size   | Time         | B/s\n");
   for (int numComm = 14; numComm <= size; numComm *= 2) {
     MPI_Comm subComm = MPI_COMM_NULL;
