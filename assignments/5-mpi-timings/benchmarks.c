@@ -116,7 +116,7 @@ int main(int argc, char **argv)
   /* === POINT-TO-POINT PING-PONG TIMINGS === */
   MPI_LOG(rank, "MPI Point-to-point ping-pong test:\n"
           " # Processes  | Message Size | Total Size   | Time         | B/s\n");
-  for (int numComm = 4; numComm <= size; numComm *= 4) {
+  for (int numComm = 14; numComm <= size; numComm *= 2) {
     MPI_Comm subComm = MPI_COMM_NULL;
 
     err = splitCommunicator(comm, numComm, &subComm); MPI_CHK(err);
@@ -156,7 +156,7 @@ int main(int argc, char **argv)
   /* === BROADCAST PING-PONG === */
   MPI_LOG(rank, "MPI Broadcast ping-pong test:\n"
           " # Processes  | Message Size | Total Size   | Time         | B/s\n");
-  for (int numComm = 4; numComm <= size; numComm *= 4) {
+  for (int numComm = 14; numComm <= size; numComm *= 2) {
     MPI_Comm subComm = MPI_COMM_NULL;
 
     err = splitCommunicator(MPI_COMM_WORLD, numComm, &subComm); MPI_CHK(err);
@@ -180,7 +180,7 @@ int main(int argc, char **argv)
   /* === SCATTER PING-PONG === */
   MPI_LOG(rank, "MPI Scatter ping-pong test:\n"
           " # Processes  | Message Size | Total Size   | Time         | B/s\n");
-  for (int numComm = 4; numComm <= size; numComm *= 4) {
+  for (int numComm = 14; numComm <= size; numComm *= 2) {
     MPI_Comm subComm = MPI_COMM_NULL;
 
     err = splitCommunicator(MPI_COMM_WORLD, numComm, &subComm); MPI_CHK(err);
@@ -203,7 +203,7 @@ int main(int argc, char **argv)
   /* === ALL REDUCE: BXOR messages of varying lengths === */
   MPI_LOG(rank, "MPI All-reduce test:\n"
           " # Processes  | Message Size | Total Size   | Time         | B/s\n");
-  for (int numComm = 4; numComm <= size; numComm *= 4) {
+  for (int numComm = 14; numComm <= size; numComm *= 2) {
     MPI_Comm subComm = MPI_COMM_NULL;
 
     err = splitCommunicator(MPI_COMM_WORLD, numComm, &subComm); MPI_CHK(err);
@@ -225,7 +225,7 @@ int main(int argc, char **argv)
   /* === ALL GATHER === */
   MPI_LOG(rank, "MPI All-gather test:\n"
           " # Processes  | Message Size | Total Size   | Time         | B/s\n");
-  for (int numComm = 4; numComm <= size; numComm *= 4) {
+  for (int numComm = 14; numComm <= size; numComm *= 2) {
     MPI_Comm subComm = MPI_COMM_NULL;
 
     err = splitCommunicator(MPI_COMM_WORLD, numComm, &subComm); MPI_CHK(err);
@@ -247,7 +247,7 @@ int main(int argc, char **argv)
   /* === ALL TO ALL === */
   MPI_LOG(rank, "MPI All-to-all transpose test:\n"
           " # Processes  | Message Size | Total Size   | Time         | B/s\n");
-  for (int numComm = 4; numComm <= size; numComm *= 4) {
+  for (int numComm = 14; numComm <= size; numComm *= 2) {
     MPI_Comm subComm = MPI_COMM_NULL;
 
     err = splitCommunicator(MPI_COMM_WORLD, numComm, &subComm); MPI_CHK(err);
