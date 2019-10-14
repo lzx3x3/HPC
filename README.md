@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # CSE 6230 (Fall 2019, 3 Credit Hours) | High Performance Parallel Computing: Tools and Applications
 
 ## Contact
@@ -284,3 +285,7 @@ to obtain an accommodations letter.  Please also e-mail me as soon as possible
 in order to set up a time to discuss your learning needs.
 
 
+=======
+# HPC
+HPC class learning/notes
+>>>>>>> e7366232297def38fa4619bcf29e3810bf22f2cd
