@@ -17,18 +17,27 @@ int splitCommunicator(MPI_Comm comm, int firstCommSize, MPI_Comm *subComm_p)
    * `VecGetGlobalSize_tree_subcomm()` in the file `dmv_global_size.c` in the
    * `notes/mpi/dmv` example.
    */
+    
+   int err, rank, size, color;
+   rank = MPI_Comm_rank(comm, &rank);
+   size = MPI_Comm_size(comm, &size);
+   color = (rank>=firstCommSize);
+   err = MPI_Comm_split(comm, color, rank, subComm_p); MPI_CHK(err);
   return 0;
 }
 
 int destroyCommunicator(MPI_Comm *subComm_p)
 {
   /* TODO: destroy the subcommunicator created in `splitCommunicator` */
+  int err = MPI_Comm_free(subComm_p);
+  MPI_CHK(err);
   return 0;
 }
 
 int startTime(double *tic_p)
 {
   /* TODO: Record the MPI walltime in `tic_p` */
+  *tic_p = MPI_Wtime();
   return 0;
 }
 
@@ -36,6 +45,8 @@ int stopTime(double tic_in, double *toc_p)
 {
   /* TODO: Get the elapsed MPI walltime since `tic_in`,
    * write the results in `toc_p` */
+  double t = MPI_Wtime();
+  *toc_p = t - tic_in;
   return 0;
 }
 
@@ -43,6 +54,8 @@ int maxTime(MPI_Comm comm, double myTime, double *maxTime_p)
 {
   /* TODO: take the times from all processes and compute the maximum,
    * storing the result on process 0 */
+  int err = MPI_Reduce(&myTime, maxTime_p, 1, MPI_DOUBLE, MPI_MAX, 0, comm);
+  MPI_CHK(err);
   return 0;
 }
 
@@ -126,7 +139,7 @@ int main(int argc, char **argv)
       double tic = -1;
 
       for (int t = 0; t < numTests + numSkip; t++) {
-        double tic = -1.;
+        //double tic = -1.;
 
         if (t == numSkip) {
           err = startTime(&tic); MPI_CHK(err);
@@ -141,7 +154,7 @@ int main(int argc, char **argv)
           }
         }
       }
-      err = stopTime(tic, &tic); MPI_CHK(err);
+      err = stopTime(tic, &timeAvg); MPI_CHK(err);
       timeAvg /= numTests;
       err = maxTime(subComm, timeAvg, &timeAvg); MPI_CHK(err);
       MPI_LOG(rank, " %12d   %12d   %12lld   %+12.5e   %+12.5e\n", numComm, numBytes, totalNumBytes, timeAvg, totalNumBytes / timeAvg);
@@ -172,6 +185,23 @@ int main(int argc, char **argv)
        * the collective with the reverse communication pattern of broadcast
        * for the 'pong' message.
        * (HINT: look up the proper usage of MPI_IN_PLACE) */
+      
+      /////////////My Code//////////////////
+
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+      /////////////My Code//////////////////
+        
       MPI_LOG(rank, " %12d   %12d   %12lld   %+12.5e   %+12.5e\n", numComm, numBytes, totalNumBytes, timeAvg, totalNumBytes / timeAvg);
     }
     err = destroyCommunicator(&subComm); MPI_CHK(err);
