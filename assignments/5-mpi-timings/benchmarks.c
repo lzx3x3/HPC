@@ -17,12 +17,10 @@ int splitCommunicator(MPI_Comm comm, int firstCommSize, MPI_Comm *subComm_p)
    * `VecGetGlobalSize_tree_subcomm()` in the file `dmv_global_size.c` in the
    * `notes/mpi/dmv` example.
    */
-    
-   int err, rank, size, color;
-   rank = MPI_Comm_rank(comm, &rank);
-   size = MPI_Comm_size(comm, &size);
-   color = (rank>=firstCommSize);
-   err = MPI_Comm_split(comm, color, rank, subComm_p); MPI_CHK(err);
+  int err, rank, color;
+  err = MPI_Comm_rank(comm, &rank); MPI_CHK(err);
+  color = (rank >= firstCommSize);
+  err = MPI_Comm_split(comm, color, rank, subComm_p); MPI_CHK(err);
   return 0;
 }
 
@@ -131,23 +129,28 @@ int main(int argc, char **argv)
           " # Processes  | Message Size | Total Size   | Time         | B/s\n");
   for (int numComm = 14; numComm <= size; numComm *= 2) {
     MPI_Comm subComm = MPI_COMM_NULL;
-
-    err = splitCommunicator(comm, numComm, &subComm); MPI_CHK(err);
-    for (int numBytes = 8; numBytes <= maxSize; numBytes *= 8) {
-      double        timeAvg = 0.;
-      long long int totalNumBytes = numBytes * numComm; 
+    err = splitCommunicator(comm, numComm, &subComm); 
+    MPI_CHK(err);
+    
+    for (int numBytes = 8; numBytes <= maxSize; numBytes *= 8) 
+    {
       double tic = -1;
-
-      for (int t = 0; t < numTests + numSkip; t++) {
-        //double tic = -1.;
-
-        if (t == numSkip) {
-          err = startTime(&tic); MPI_CHK(err);
+      double timeAvg = 0.;
+      long long int totalNumBytes = numBytes * numComm; 
+      //double tic = -1;//
+      for (int t = 0; t < numTests + numSkip; t++) 
+      {
+        //double tic = -1.;//
+        if (t == numSkip) 
+        {
+          err = startTime(&tic); 
+          MPI_CHK(err);
         }
         if (rank < numComm) {
           if (rank < numComm / 2) {
             err = MPI_Send(buffer, numBytes, MPI_BYTE, rank + numComm / 2, 0, subComm); MPI_CHK(err);
-            err = MPI_Recv(buffer, numBytes, MPI_BYTE, rank + numComm / 2, 0, subComm, MPI_STATUS_IGNORE); MPI_CHK(err);
+            err = MPI_Recv(buffer, numBytes, MPI_BYTE, rank + numComm / 2, 0, subComm, MPI_STATUS_IGNORE); 
+              MPI_CHK(err);
           } else {
             err = MPI_Recv (buffer, numBytes, MPI_BYTE, rank - numComm / 2, 0, subComm, MPI_STATUS_IGNORE); MPI_CHK(err);
             err = MPI_Send (buffer, numBytes, MPI_BYTE, rank - numComm / 2, 0, subComm); MPI_CHK(err);
@@ -174,7 +177,7 @@ int main(int argc, char **argv)
 
     err = splitCommunicator(MPI_COMM_WORLD, numComm, &subComm); MPI_CHK(err);
     for (int numBytes = 8; numBytes <= maxSize; numBytes *= 8) {
-      double        timeAvg = 0.;
+      double timeAvg = 0.;
       long long int totalNumBytes = numBytes * (numComm - 1) * 2;
 
       /* TODO: Set up a ping pong test for the broadcast collective.  When
@@ -185,23 +188,38 @@ int main(int argc, char **argv)
        * the collective with the reverse communication pattern of broadcast
        * for the 'pong' message.
        * (HINT: look up the proper usage of MPI_IN_PLACE) */
-      
-      /////////////My Code//////////////////
-
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-      /////////////My Code//////////////////
-        
+      double tic = -1;
+      char* tmp_buffer;
+      tmp_buffer = (char *)calloc(totalNumBytes, sizeof(char));  // ???
+      if (!tmp_buffer)
+        return 1;
+      for (int t = 0; t < numTests + numSkip; t++)
+      {
+        if (t == numSkip)
+        {
+          err = startTime(&tic);
+          MPI_CHK(err);
+        }
+        if (!rank)
+        {
+          err = MPI_Bcast(buffer, numBytes, MPI_BYTE, 0, subComm);
+          MPI_CHK(err);
+          err = MPI_Reduce(MPI_IN_PLACE, buffer, numBytes, MPI_BYTE, MPI_BXOR, 0, subComm);
+          MPI_CHK(err);
+        }
+        else
+        {
+          err = MPI_Bcast(buffer, numBytes, MPI_BYTE, 0, subComm);
+          MPI_CHK(err);
+          err = MPI_Reduce(buffer, tmp_buffer, numBytes, MPI_BYTE, MPI_BXOR, 0, subComm);
+          MPI_CHK(err);
+        }
+      }
+      err = stopTime(tic, &timeAvg);
+      MPI_CHK(err);
+      timeAvg /= numTests;
+      err = maxTime(subComm, timeAvg, &timeAvg);
+      MPI_CHK(err);
       MPI_LOG(rank, " %12d   %12d   %12lld   %+12.5e   %+12.5e\n", numComm, numBytes, totalNumBytes, timeAvg, totalNumBytes / timeAvg);
     }
     err = destroyCommunicator(&subComm); MPI_CHK(err);
@@ -225,6 +243,25 @@ int main(int argc, char **argv)
        * `numBytes` bytes of `buffer2` on the receiving processes.  Use
        * the collective with the reverse communication pattern of scatter
        * for the 'pong' message. */
+      double tic = -1;
+      for (int t = 0; t < numTests + numSkip; t++)
+      {
+        if (t == numSkip)
+        {
+          err = startTime(&tic);
+          MPI_CHK(err);
+        }
+
+        err = MPI_Scatter(buffer, numBytes, MPI_BYTE, buffer2, numBytes, MPI_BYTE, 0, subComm);
+        MPI_CHK(err);
+        err = MPI_Gather(buffer2, numBytes, MPI_BYTE, buffer, numBytes, MPI_BYTE, 0, subComm);
+        MPI_CHK(err);
+      }
+      err = stopTime(tic, &timeAvg);
+      MPI_CHK(err);
+      timeAvg /= numTests;
+      err = maxTime(subComm, timeAvg, &timeAvg);
+      MPI_CHK(err);
       MPI_LOG(rank, " %12d   %12d   %12lld   %+12.5e   %+12.5e\n", numComm, numBytes, totalNumBytes, timeAvg, totalNumBytes / timeAvg);
     }
     err = destroyCommunicator(&subComm); MPI_CHK(err);
@@ -247,6 +284,24 @@ int main(int argc, char **argv)
        * chars of `buffer` from every process and store the results in
        * `buffer` on all processes (HINT: MPI_IN_PLACE again).
        */
+      double tic = -1;
+      for (int t = 0; t < numTests + numSkip; t++)
+      {
+        if (t == numSkip)
+        {
+          err = startTime(&tic);
+          MPI_CHK(err);
+        }
+
+        err = MPI_Allreduce(MPI_IN_PLACE, buffer, numBytes, MPI_BYTE, MPI_BXOR, subComm);
+        MPI_CHK(err);
+      }
+      err = stopTime(tic, &timeAvg);
+      MPI_CHK(err);
+      timeAvg /= numTests;
+      err = maxTime(subComm, timeAvg, &timeAvg);
+      MPI_CHK(err);
+
       MPI_LOG(rank, " %12d   %12d   %12lld   %+12.5e   %+12.5e\n", numComm, numBytes, totalNumBytes, timeAvg, totalNumBytes / timeAvg);
     }
     err = destroyCommunicator(&subComm); MPI_CHK(err);
@@ -269,6 +324,23 @@ int main(int argc, char **argv)
        * bytes of `buffer2` from every process and store the results in
        * `buffer`.
        */
+      double tic = -1;
+      for (int t = 0; t < numTests + numSkip; t++)
+      {
+        if (t == numSkip)
+        {
+          err = startTime(&tic);
+          MPI_CHK(err);
+        }
+
+        err = MPI_Allgather(buffer2, numBytes, MPI_BYTE, buffer, numBytes, MPI_BYTE, subComm);
+        MPI_CHK(err);
+      }
+      err = stopTime(tic, &timeAvg);
+      MPI_CHK(err);
+      timeAvg /= numTests;
+      err = maxTime(subComm, timeAvg, &timeAvg);
+      MPI_CHK(err);
       MPI_LOG(rank, " %12d   %12d   %12lld   %+12.5e   %+12.5e\n", numComm, numBytes, totalNumBytes, timeAvg, totalNumBytes / timeAvg);
     }
     err = destroyCommunicator(&subComm); MPI_CHK(err);
@@ -292,6 +364,23 @@ int main(int argc, char **argv)
        * store the results in `buffer`.  This is another place where
        * MPI_IN_PLACE is relevant.
        */
+      double tic = -1;
+      for (int t = 0; t < numTests + numSkip; t++)
+      {
+        if (t == numSkip)
+        {
+          err = startTime(&tic);
+          MPI_CHK(err);
+        }
+
+        err = MPI_Alltoall(MPI_IN_PLACE, numBytes, MPI_BYTE, buffer, numBytes, MPI_BYTE, subComm);
+        MPI_CHK(err);
+      }
+      err = stopTime(tic, &timeAvg);
+      MPI_CHK(err);
+      timeAvg /= numTests;
+      err = maxTime(subComm, timeAvg, &timeAvg);
+      MPI_CHK(err);
       MPI_LOG(rank, " %12d   %12d   %12lld   %+12.5e   %+12.5e\n", numComm, numBytes, totalNumBytes, timeAvg, totalNumBytes / timeAvg);
     }
     err = destroyCommunicator(&subComm); MPI_CHK(err);
