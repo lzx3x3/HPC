@@ -20,14 +20,15 @@ static int OptionsGetEnum(const dmv_option *options, int numOptions, const char 
 int ArgsCreate(MPI_Comm comm, int argc, char **argv, Args *args_p)
 {
   Args     args = NULL;
-  int      err, opt, size;
+  int      err, opt, size, rank;
 
   args = (Args) calloc(1,sizeof(*args));
   if (!args) MPI_CHK(1);
 
   args->comm = comm;
   args->scale = 20;
-  while ((opt = getopt(argc, argv, "s:e:g:l:v:d:p:m:")) != -1) {
+  err = MPI_Comm_rank(comm, &rank); MPI_CHK(err);
+  while ((opt = getopt(argc, argv, "s:e:g:l:v:d:p:m:h")) != -1) {
     switch (opt) {
     case 's':
       args->scale = atoi(optarg);
@@ -53,30 +54,34 @@ int ArgsCreate(MPI_Comm comm, int argc, char **argv, Args *args_p)
     case 'm':
       err = OptionsGetEnum(MatVecTypes, MATVEC_NUM_TYPES, optarg, &args->matvec_strategy); MPI_CHK(err);
       break;
+    case 'h':
+      if (!rank) {
+        fprintf(stderr, "Usage: %s [-s scale] [-e seed] [-v verbosity] [-d debug]\n", argv[0]);
+        fprintf(stderr, "          [-g global_size_strategy] [-l layout_strategy]\n");
+        fprintf(stderr, "          [-p matrix_partition_strategy] [-m matvec_strategy]\n\n");
+        fprintf(stderr, "global_size_strategy:");
+        for (int i = 0; i < GLOBAL_SIZE_NUM_TYPES; i++) {
+          if (i) {fprintf(stderr, ", ");}
+          fprintf(stderr, "%s", GlobalSizeTypes[i].optname);
+        }
+        fprintf(stderr, "\nlayout_strategy: ");
+        for (int i = 0; i < LAYOUT_NUM_TYPES; i++) {
+          if (i) {fprintf(stderr, ", ");}
+          fprintf(stderr, "%s", LayoutTypes[i].optname);
+        }
+        fprintf(stderr, "\nmatrix_partition_strategy: ");
+        for (int i = 0; i < PARTITION_NUM_TYPES; i++) {
+          if (i) {fprintf(stderr, ", ");}
+          fprintf(stderr, "%s", PartitionTypes[i].optname);
+        }
+        fprintf(stderr, "\nmatvec_strategy: ");
+        for (int i = 0; i < MATVEC_NUM_TYPES; i++) {
+          if (i) {fprintf(stderr, ", ");}
+          fprintf(stderr, "%s", MatVecTypes[i].optname);
+        }
+      }
+      break;
     default:
-      fprintf(stderr, "Usage: %s [-s scale] [-e seed] [-v verbosity] [-d debug]\n", argv[0]);
-      fprintf(stderr, "          [-g global_size_strategy] [-l layout_strategy]\n");
-      fprintf(stderr, "          [-p matrix_partition_strategy] [-m matvec_strategy]\n\n");
-      fprintf(stderr, "global_size_strategy:");
-      for (int i = 0; i < GLOBAL_SIZE_NUM_TYPES; i++) {
-        if (i) {fprintf(stderr, ", ");}
-        fprintf(stderr, "%s", GlobalSizeTypes[i].optname);
-      }
-      fprintf(stderr, "\nlayout_strategy: ");
-      for (int i = 0; i < LAYOUT_NUM_TYPES; i++) {
-        if (i) {fprintf(stderr, ", ");}
-        fprintf(stderr, "%s", LayoutTypes[i].optname);
-      }
-      fprintf(stderr, "\nmatrix_partition_strategy: ");
-      for (int i = 0; i < PARTITION_NUM_TYPES; i++) {
-        if (i) {fprintf(stderr, ", ");}
-        fprintf(stderr, "%s", PartitionTypes[i].optname);
-      }
-      fprintf(stderr, "\nmatvec_strategy: ");
-      for (int i = 0; i < MATVEC_NUM_TYPES; i++) {
-        if (i) {fprintf(stderr, ", ");}
-        fprintf(stderr, "%s", MatVecTypes[i].optname);
-      }
       break;
     }
   }

@@ -117,9 +117,11 @@ int main (int argc, char **argv)
       nEnd   = rEnd;
     }
     break;
+  case PARTITION_2D:
+    MPI_LOG(MPI_COMM_WORLD, "Not implemented type %s\n", PartitionTypes[partitionType].optname); MPI_CHK(1);
+    break;
   default:
-    MPI_LOG(MPI_COMM_WORLD, "Unrecognized partition type %d\n", partitionType);
-    MPI_CHK(1);
+    MPI_LOG(MPI_COMM_WORLD, "Unrecognized partition type %d\n", partitionType); MPI_CHK(1);
   }
 
   /* Allocate space for the matrix entries */
