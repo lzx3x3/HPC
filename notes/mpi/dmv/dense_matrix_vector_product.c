@@ -118,7 +118,24 @@ int main (int argc, char **argv)
     }
     break;
   case PARTITION_2D:
-    MPI_LOG(MPI_COMM_WORLD, "Not implemented type %s\n", PartitionTypes[partitionType].optname); MPI_CHK(1);
+    {
+      int *rLayout, *lLayout;
+
+      rLayout = (int *) malloc((size + 1) * sizeof (*rLayout));
+      if (!rLayout) MPI_CHK(1);
+      lLayout = (int *) malloc((size + 1) * sizeof (*lLayout));
+      if (!lLayout) MPI_CHK(1);
+
+      /* Get the first global vector index for every process (with the last value in the
+       * array being the full length of the vector) */
+      err = VecGetLayout(args, rLocal, rLayout); MPI_CHK(err);
+      err = VecGetLayout(args, lLocal, lLayout); MPI_CHK(err);
+
+      /* Use the vector layouts to determine the compatible 2d matrix partition */
+      err = MatrixGetLocalRange2d(args, lLayout, rLayout, &mStart, &mEnd, &nStart, &nEnd); MPI_CHK(err);
+      free(lLayout);
+      free(rLayout);
+    }
     break;
   default:
     MPI_LOG(MPI_COMM_WORLD, "Unrecognized partition type %d\n", partitionType); MPI_CHK(1);

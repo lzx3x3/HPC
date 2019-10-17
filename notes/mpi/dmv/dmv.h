@@ -35,6 +35,8 @@ int VecGetGlobalSize(Args args, int mLocal, int *mGlobal_p);
 int VecGetLayout(Args args, int mLocal, int *localOffsets);
 
 int VectorsGetLocalSize(Args args, int *mLocal_p, int *nLocal_p);
+int DMVCommGetRankCoordinates2D(MPI_Comm comm, int *num_rows_p, int *row_p, int *num_cols_p, int *col_p);
+int MatrixGetLocalRange2d(Args args, const int *lOffsets, const int *rOffsets, int *mStart_p, int *mEnd_p, int *nStart_p, int *nEnd_p);
 int MatrixGetEntries(Args args, int rowStart, int rowEnd, int colStart, int colEnd, double *entries);
 
 int DenseMatVec(Args args, int mStart, int mEnd, int nStart, int nEnd, const double *matrixEntries, int rStart, int rEnd, const double *vecRightLocal, int lStart, int lEnd, double *vecLeftLocal);
