@@ -78,6 +78,7 @@ static const dmv_option LayoutTypes[LAYOUT_NUM_TYPES] =
 enum {
   PARTITION_ROWS = 0,
   PARTITION_COLS,
+  PARTITION_2D,
   PARTITION_NUM_TYPES
 };
 
@@ -85,6 +86,7 @@ static const dmv_option PartitionTypes[PARTITION_NUM_TYPES] =
 {
   {"rows", PARTITION_ROWS},
   {"cols", PARTITION_COLS},
+  {"2d",   PARTITION_2D},
 };
 
 enum {

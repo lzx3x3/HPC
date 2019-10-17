@@ -17,6 +17,10 @@ int DenseMatVec(Args args, int mStart, int mEnd, int nStart, int nEnd, const dou
     if (args->verbosity) {MPI_LOG(args->comm, "DenseMatVec column partition\n");}
     err = DenseMatVec_ColPartition(args, mStart, mEnd, nStart, nEnd, matrixEntries, nLocal, vecRightLocal, mLocal, vecLeftLocal); MPI_CHK(err);
     break;
+  case PARTITION_2D:
+    if (args->verbosity) {MPI_LOG(args->comm, "DenseMatVec 2d partition\n");}
+    err = DenseMatVec_2dPartition(args, mStart, mEnd, nStart, nEnd, matrixEntries, nLocal, vecRightLocal, mLocal, vecLeftLocal); MPI_CHK(err);
+    break;
   default:
     MPI_LOG(args->comm, "Unknown partition type %d\n", args->partition_strategy);
     MPI_CHK(1);
