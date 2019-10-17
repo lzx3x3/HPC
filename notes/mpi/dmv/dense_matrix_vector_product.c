@@ -45,9 +45,9 @@ int main (int argc, char **argv)
   err = MPI_Comm_rank(MPI_COMM_WORLD, &rank);          MPI_CHK(err);
   err = ArgsCreate(MPI_COMM_WORLD, argc, argv, &args); MPI_CHK(err);
 
-  /* Get the local sizes: the number of entries in the matrix in
-   * this process's memory */
-  err = MatrixGetLocalSize(args, &mLocal, &nLocal); MPI_CHK(err);
+  /* Get the local sizes: the number of entries in the left/output vector (mLocal)
+   * and right/input vector (nLocal) in this process's memory */
+  err = VectorsGetLocalSize(args, &mLocal, &nLocal); MPI_CHK(err);
 
   /* Allocate space for the local portions of the input and output
    * vectors */

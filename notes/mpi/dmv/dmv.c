@@ -7,7 +7,7 @@
 
 enum {FILL_MATRIX, FILL_VECTOR};
 
-int MatrixGetLocalSize(Args args, int *local_m, int *local_n)
+int VectorsGetLocalSize(Args args, int *local_m, int *local_n)
 {
   int scale = args->scale;
   int targetGlobalSize = (int) pow(2., scale);

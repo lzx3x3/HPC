@@ -34,7 +34,7 @@ int VecGetEntries(Args args, int rowStart, int rowEnd, double *entries);
 int VecGetGlobalSize(Args args, int mLocal, int *mGlobal_p);
 int VecGetLayout(Args args, int mLocal, int *localOffsets);
 
-int MatrixGetLocalSize(Args args, int *mLocal_p, int *nLocal_p);
+int VectorsGetLocalSize(Args args, int *mLocal_p, int *nLocal_p);
 int MatrixGetEntries(Args args, int rowStart, int rowEnd, int colStart, int colEnd, double *entries);
 
 int DenseMatVec(Args args, int mStart, int mEnd, int nStart, int nEnd, const double *matrixEntries, int nLocal, const double *vecRightLocal, int mLocal, double *vecLeftLocal);
