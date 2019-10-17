@@ -59,23 +59,23 @@ int ArgsCreate(MPI_Comm comm, int argc, char **argv, Args *args_p)
       fprintf(stderr, "          [-p matrix_partition_strategy] [-m matvec_strategy]\n\n");
       fprintf(stderr, "global_size_strategy:");
       for (int i = 0; i < GLOBAL_SIZE_NUM_TYPES; i++) {
-        if (i) {fprintf(stderr, " , ");}
-        fprintf(stderr, ", %s", GlobalSizeTypes[i].optname);
+        if (i) {fprintf(stderr, ", ");}
+        fprintf(stderr, "%s", GlobalSizeTypes[i].optname);
       }
       fprintf(stderr, "\nlayout_strategy: ");
       for (int i = 0; i < LAYOUT_NUM_TYPES; i++) {
-        if (i) {fprintf(stderr, " , ");}
-        fprintf(stderr, ", %s", LayoutTypes[i].optname);
+        if (i) {fprintf(stderr, ", ");}
+        fprintf(stderr, "%s", LayoutTypes[i].optname);
       }
       fprintf(stderr, "\nmatrix_partition_strategy: ");
       for (int i = 0; i < PARTITION_NUM_TYPES; i++) {
-        if (i) {fprintf(stderr, " , ");}
-        fprintf(stderr, ", %s", PartitionTypes[i].optname);
+        if (i) {fprintf(stderr, ", ");}
+        fprintf(stderr, "%s", PartitionTypes[i].optname);
       }
       fprintf(stderr, "\nmatvec_strategy: ");
       for (int i = 0; i < MATVEC_NUM_TYPES; i++) {
-        if (i) {fprintf(stderr, " , ");}
-        fprintf(stderr, ", %s", MatVecTypes[i].optname);
+        if (i) {fprintf(stderr, ", ");}
+        fprintf(stderr, "%s", MatVecTypes[i].optname);
       }
       break;
     }
