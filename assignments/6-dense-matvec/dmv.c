@@ -65,7 +65,7 @@ int DMVCommGetRankCoordinates2D(MPI_Comm comm, int *num_rows_p, int *row_p, int 
 /* Given arguments (which include a communicator, args->comm),
  * offsets for each rank in the left and right vectors compatible with a matrix (lOffsets and rOffsets),
  * compute which entries in the matrix this MPI rank will own, given by the column ranges [mStart, mEnd) and row ranges [nStart, nEnd) */
-int MatrixGetLocalRange2d(Args args, const int *lOffsets, const int *rOffset, int *mStart_p, int *mEnd_p, int *nStart_p, int *nEnd_p)
+int MatrixGetLocalRange2d(Args args, const int *lOffsets, const int *rOffsets, int *mStart_p, int *mEnd_p, int *nStart_p, int *nEnd_p)
 {
   MPI_Comm comm = args->comm;
   int      mStart, mEnd, nStart, nEnd;

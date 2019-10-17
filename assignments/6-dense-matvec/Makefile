@@ -4,7 +4,7 @@ MPIRUN   = mpirun
 N        = 4
 CFLAGS   = -g -Wall -O3 -std=c99
 CPPFLAGS = -I../../utils/Random123/include -I../../utils
-LIBS     = -lm
+LIBS     = -lm -lrt
 RM       = rm -f
 ARGS     =
 VALGRIND =
