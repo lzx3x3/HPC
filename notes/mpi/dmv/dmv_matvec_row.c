@@ -1,10 +1,10 @@
 #include "dmv.h"
 #include "dmv_impl.h"
 
-static int DenseMatVec_RowPartition_Ssend(Args args, int mStart, int mEnd, int nStart, int nEnd, const double *matrixEntries, int nLocal, const double *vecRightLocal, int mLocal, double *vecLeftLocal)
+static int DenseMatVec_RowPartition_Ssend(Args args, int mStart, int mEnd, int nStart, int nEnd, const double *matrixEntries, int rStart, int rEnd, const double *vecRightLocal, int lStart, int lEnd, double *vecLeftLocal)
 {
   double      *recvBuf, *sendBuf;
-  int         err, rank, size, nOffset, nGlobal = nEnd - nStart;
+  int         err, rank, size, nOffset = rStart, nLocal = rEnd - rStart, mLocal = lEnd - lStart, nGlobal = nEnd - nStart;
   int         nRecv;
 
   err = MPI_Comm_size(args->comm, &size); MPI_CHK(err);
@@ -16,13 +16,6 @@ static int DenseMatVec_RowPartition_Ssend(Args args, int mStart, int mEnd, int n
   /* Set up a buffer to send the other local portions of the right vector */
   sendBuf = (double *) malloc(nGlobal * sizeof(*recvBuf));
   if (!sendBuf) MPI_CHK(1);
-
-  /* We need to know which columns of the matrix belong to each process:
-   * because we are doing a shift cycle where we get consecutive sections of
-   * the vector, it is sufficient to know the local offset, and compute each
-   * subsequent offset from the size of the section of the vector that is
-   * received */
-  err = VecGetOffset(args, nLocal, &nOffset); MPI_CHK(err);
 
   /* Copy vecLocal into recvBuf so that we can do the same thing in every
    * iteration: compute the portion of the matvec for the section in the
@@ -75,7 +68,7 @@ static int DenseMatVec_RowPartition_Ssend(Args args, int mStart, int mEnd, int n
   return 0;
 }
 
-static int DenseMatVec_RowPartition_Issend(Args args, int mStart, int mEnd, int nStart, int nEnd, const double *matrixEntries, int nLocal, const double *vecRightLocal, int mLocal, double *vecLeftLocal)
+static int DenseMatVec_RowPartition_Issend(Args args, int mStart, int mEnd, int nStart, int nEnd, const double *matrixEntries, int rStart, int rEnd, const double *vecRightLocal, int lStart, int lEnd, double *vecLeftLocal)
 {
   double      *recvBuf;
   int         *nOffsets;
@@ -83,6 +76,7 @@ static int DenseMatVec_RowPartition_Issend(Args args, int mStart, int mEnd, int 
   MPI_Request *sendReqs;
   int         *indices;
   int         err, rank, size, nGlobal = nEnd - nStart;
+  int         nLocal = rEnd - rStart, mLocal = lEnd - lStart;
 
   err = MPI_Comm_size(args->comm, &size); MPI_CHK(err);
   err = MPI_Comm_rank(args->comm, &rank); MPI_CHK(err);
@@ -140,12 +134,13 @@ static int DenseMatVec_RowPartition_Issend(Args args, int mStart, int mEnd, int 
   return 0;
 }
 
-static int DenseMatVec_RowPartition_Allgatherv(Args args, int mStart, int mEnd, int nStart, int nEnd, const double *matrixEntries, int nLocal, const double *vecRightLocal, int mLocal, double *vecLeftLocal)
+static int DenseMatVec_RowPartition_Allgatherv(Args args, int mStart, int mEnd, int nStart, int nEnd, const double *matrixEntries, int rStart, int rEnd, const double *vecRightLocal, int lStart, int lEnd, double *vecLeftLocal)
 {
   double      *vecRight;
   int         *nLocals;
   int         *nOffsets;
   int         err, rank, size, nGlobal = nEnd - nStart;
+  int         nLocal = rEnd - rStart, mLocal = lEnd - lStart;
 
   err = MPI_Comm_size(args->comm, &size); MPI_CHK(err);
   err = MPI_Comm_rank(args->comm, &rank); MPI_CHK(err);
@@ -183,7 +178,7 @@ static int DenseMatVec_RowPartition_Allgatherv(Args args, int mStart, int mEnd, 
   return 0;
 }
 
-int DenseMatVec_RowPartition(Args args, int mStart, int mEnd, int nStart, int nEnd, const double *matrixEntries, int nLocal, const double *vecRightLocal, int mLocal, double *vecLeftLocal)
+int DenseMatVec_RowPartition(Args args, int mStart, int mEnd, int nStart, int nEnd, const double *matrixEntries, int rStart, int rEnd, const double *vecRightLocal, int lStart, int lEnd, double *vecLeftLocal)
 {
   int strat, err;
 
@@ -191,15 +186,15 @@ int DenseMatVec_RowPartition(Args args, int mStart, int mEnd, int nStart, int nE
   switch (strat) {
   case MATVEC_SSEND:
     if (args->verbosity) {MPI_LOG(args->comm, "DenseMatVec, Row Partition, Ssend\n");}
-    err = DenseMatVec_RowPartition_Ssend(args, mStart, mEnd, nStart, nEnd, matrixEntries, nLocal, vecRightLocal, mLocal, vecLeftLocal); MPI_CHK(err);
+    err = DenseMatVec_RowPartition_Ssend(args, mStart, mEnd, nStart, nEnd, matrixEntries, rStart, rEnd, vecRightLocal, lStart, lEnd, vecLeftLocal); MPI_CHK(err);
     break;
   case MATVEC_ISSEND:
     if (args->verbosity) {MPI_LOG(args->comm, "DenseMatVec, Row Partition, Issend\n");}
-    err = DenseMatVec_RowPartition_Issend(args, mStart, mEnd, nStart, nEnd, matrixEntries, nLocal, vecRightLocal, mLocal, vecLeftLocal); MPI_CHK(err);
+    err = DenseMatVec_RowPartition_Issend(args, mStart, mEnd, nStart, nEnd, matrixEntries, rStart, rEnd, vecRightLocal, lStart, lEnd, vecLeftLocal); MPI_CHK(err);
     break;
   case MATVEC_ALLGATHERV:
     if (args->verbosity) {MPI_LOG(args->comm, "DenseMatVec, Row Partition, Allgatherv\n");}
-    err = DenseMatVec_RowPartition_Allgatherv(args, mStart, mEnd, nStart, nEnd, matrixEntries, nLocal, vecRightLocal, mLocal, vecLeftLocal); MPI_CHK(err);
+    err = DenseMatVec_RowPartition_Allgatherv(args, mStart, mEnd, nStart, nEnd, matrixEntries, rStart, rEnd, vecRightLocal, lStart, lEnd, vecLeftLocal); MPI_CHK(err);
     break;
   default:
     MPI_LOG(args->comm, "Unrecognized matvec type %d\n", strat); MPI_CHK(err);

@@ -3,23 +3,23 @@
 #include "dmv_impl.h"
 
 
-int DenseMatVec(Args args, int mStart, int mEnd, int nStart, int nEnd, const double *matrixEntries, int nLocal, const double *vecRightLocal, int mLocal, double *vecLeftLocal)
+int DenseMatVec(Args args, int mStart, int mEnd, int nStart, int nEnd, const double *matrixEntries, int rStart, int rEnd, const double *vecRightLocal, int lStart, int lEnd, double *vecLeftLocal)
 {
-  int err;
+  int err, mLocal = lEnd - lStart;
 
   for (int i = 0; i < mLocal; i++) {vecLeftLocal[i] = 0.;}
   switch (args->partition_strategy) {
   case PARTITION_ROWS:
     if (args->verbosity) {MPI_LOG(args->comm, "DenseMatVec row partition\n");}
-    err = DenseMatVec_RowPartition(args, mStart, mEnd, nStart, nEnd, matrixEntries, nLocal, vecRightLocal, mLocal, vecLeftLocal); MPI_CHK(err);
+    err = DenseMatVec_RowPartition(args, mStart, mEnd, nStart, nEnd, matrixEntries, rStart, rEnd, vecRightLocal, lStart, lEnd, vecLeftLocal); MPI_CHK(err);
     break;
   case PARTITION_COLS:
     if (args->verbosity) {MPI_LOG(args->comm, "DenseMatVec column partition\n");}
-    err = DenseMatVec_ColPartition(args, mStart, mEnd, nStart, nEnd, matrixEntries, nLocal, vecRightLocal, mLocal, vecLeftLocal); MPI_CHK(err);
+    err = DenseMatVec_ColPartition(args, mStart, mEnd, nStart, nEnd, matrixEntries, rStart, rEnd, vecRightLocal, lStart, lEnd, vecLeftLocal); MPI_CHK(err);
     break;
   case PARTITION_2D:
     if (args->verbosity) {MPI_LOG(args->comm, "DenseMatVec 2d partition\n");}
-    err = DenseMatVec_2dPartition(args, mStart, mEnd, nStart, nEnd, matrixEntries, nLocal, vecRightLocal, mLocal, vecLeftLocal); MPI_CHK(err);
+    err = DenseMatVec_2dPartition(args, mStart, mEnd, nStart, nEnd, matrixEntries, rStart, rEnd, vecRightLocal, lStart, lEnd, vecLeftLocal); MPI_CHK(err);
     break;
   default:
     MPI_LOG(args->comm, "Unknown partition type %d\n", args->partition_strategy);

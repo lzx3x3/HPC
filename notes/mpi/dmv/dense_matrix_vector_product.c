@@ -29,7 +29,8 @@ int main (int argc, char **argv)
 {
   Args    args = NULL;
   int     err;
-  int     mLocal, nLocal, nOffset;
+  int     lLocal, rLocal, rOffset, lOffset, rGlobal, lGlobal;
+  int     lStart, lEnd, rStart, rEnd;
   int     mStart, mEnd, nStart, nEnd;
   int     rank, size;
   int     partitionType;
@@ -45,40 +46,45 @@ int main (int argc, char **argv)
   err = MPI_Comm_rank(MPI_COMM_WORLD, &rank);          MPI_CHK(err);
   err = ArgsCreate(MPI_COMM_WORLD, argc, argv, &args); MPI_CHK(err);
 
-  /* Get the local sizes: the number of entries in the left/output vector (mLocal)
-   * and right/input vector (nLocal) in this process's memory */
-  err = VectorsGetLocalSize(args, &mLocal, &nLocal); MPI_CHK(err);
+  /* Get the local sizes: the number of entries in the left/output vector (lLocal)
+   * and right/input vector (rLocal) in this process's memory */
+  err = VectorsGetLocalSize(args, &lLocal, &rLocal); MPI_CHK(err);
 
   /* Allocate space for the local portions of the input and output
    * vectors */
-  vecLeftLocal = (double *) malloc(mLocal * sizeof (*vecLeftLocal));
+  vecLeftLocal = (double *) malloc(lLocal * sizeof (*vecLeftLocal));
   if (!vecLeftLocal) MPI_CHK(1);
-  vecRightLocal = (double *) malloc(nLocal * sizeof (*vecRightLocal));
+  vecRightLocal = (double *) malloc(rLocal * sizeof (*vecRightLocal));
   if (!vecRightLocal) MPI_CHK(1);
 
   /* Now we need to create entries in the input (right) vector.  In this
    * example, the values in the vector are uniquely determined by their
-   * *global* index.  The array vecRightLocal has indices in [0, nLocal),
+   * *global* index.  The array vecRightLocal has indices in [0, rLocal),
    * but if we considered these local arrays to be partitions of a global
    * array, each entry also has a global index that assigned in order
    * over all processes.  So on process 0, the local indices correspond
    * to the global indicecs.  But on process 1, we start counting global
-   * indices from mLocal_0, and on process 2 we start counting global indices
-   * from (mLocal_0 + mLocal_1), etc.  We need to compute the *offset* from
+   * indices from rLocal_0, and on process 2 we start counting global indices
+   * from (rLocal_0 + rLocal_1), etc.  We need to compute the *offset* from
    * local indices to global indices by adding up the local sizes for all of
    * the lesser ranks. This is what the VecGetOffset() function computes. */
-  err = VecGetOffset(args, nLocal, &nOffset); MPI_CHK(err);
+  err = VecGetOffset(args, rLocal, &rOffset); MPI_CHK(err);
 
   /* Now that we know the indices, fill the values of the local portion of the
    * right vector */
-  err = VecGetEntries(args, nOffset, nOffset + nLocal, vecRightLocal); MPI_CHK(err);
+  err = VecGetEntries(args, rOffset, rOffset + rLocal, vecRightLocal); MPI_CHK(err);
+  rStart = rOffset;
+  rEnd   = rOffset + rLocal;
+  err = VecGetOffset(args, lLocal, &lOffset); MPI_CHK(err);
+  lStart = lOffset;
+  lEnd   = lOffset + lLocal;
 
   /* As a check on filling the entries correctly, the norm of the vector
    * should be independent of the partition */
   {
     double rightNorm;
 
-    err = GetNorm(MPI_COMM_WORLD, nLocal, vecRightLocal, &rightNorm); MPI_CHK(err);
+    err = GetNorm(MPI_COMM_WORLD, rLocal, vecRightLocal, &rightNorm); MPI_CHK(err);
     if (!rank) {
       printf("Right vector norm: %g\n", rightNorm);
     }
@@ -89,34 +95,26 @@ int main (int argc, char **argv)
   switch (partitionType) {
   case PARTITION_ROWS:
     {
-      int    nGlobal;
-      int    mOffset;
-
       /* We need to know the global size of the right vector so that we can
        * allocate and fill complete rows of the matrix */
-      err = VecGetGlobalSize(args, nLocal, &nGlobal); MPI_CHK(err);
-      /* We need to know the offset, that is, the first row of the matrix that
-       * belongs to this process */
-      err = VecGetOffset(args, mLocal, &mOffset); MPI_CHK(err);
+      err = VecGetGlobalSize(args, rLocal, &rGlobal); MPI_CHK(err);
 
-      mStart = mOffset;
-      mEnd   = mOffset + mLocal;
+      mStart = lStart;
+      mEnd   = lEnd;
       nStart = 0;
-      nEnd   = nGlobal;
+      nEnd   = rGlobal;
     }
     break;
   case PARTITION_COLS:
     {
-      int    mGlobal;
-
       /* We need to know the global size of the right vector so that we can
        * allocate and fill complete rows of the matrix */
-      err = VecGetGlobalSize(args, mLocal, &mGlobal); MPI_CHK(err);
+      err = VecGetGlobalSize(args, lLocal, &lGlobal); MPI_CHK(err);
 
       mStart = 0;
-      mEnd   = mGlobal;
-      nStart = nOffset;
-      nEnd   = nOffset + nLocal;
+      mEnd   = lGlobal;
+      nStart = rStart;
+      nEnd   = rEnd;
     }
     break;
   default:
@@ -150,7 +148,7 @@ int main (int argc, char **argv)
     double      thistime;
     /* Perform the Matrix Vector Product */
     timer = tic();
-    err = DenseMatVec(args, mStart, mEnd, nStart, nEnd, matrixEntries, nLocal, vecRightLocal, mLocal, vecLeftLocal); MPI_CHK(err);
+    err = DenseMatVec(args, mStart, mEnd, nStart, nEnd, matrixEntries, rStart, rEnd, vecRightLocal, lStart, lEnd, vecLeftLocal); MPI_CHK(err);
     thistime = toc(&timer);
     if (i) {
       time += thistime;
@@ -163,7 +161,7 @@ int main (int argc, char **argv)
     double resultNorm;
 
     /* As a check on filling the entries correctly, the norm of the product should be independent of the partition */
-    err = GetNorm(MPI_COMM_WORLD, mLocal, vecLeftLocal, &resultNorm); MPI_CHK(err);
+    err = GetNorm(MPI_COMM_WORLD, lLocal, vecLeftLocal, &resultNorm); MPI_CHK(err);
     if (!rank) {
       printf("Left vector norm: %g\n", resultNorm);
     }

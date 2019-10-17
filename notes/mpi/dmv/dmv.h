@@ -37,7 +37,7 @@ int VecGetLayout(Args args, int mLocal, int *localOffsets);
 int VectorsGetLocalSize(Args args, int *mLocal_p, int *nLocal_p);
 int MatrixGetEntries(Args args, int rowStart, int rowEnd, int colStart, int colEnd, double *entries);
 
-int DenseMatVec(Args args, int mStart, int mEnd, int nStart, int nEnd, const double *matrixEntries, int nLocal, const double *vecRightLocal, int mLocal, double *vecLeftLocal);
+int DenseMatVec(Args args, int mStart, int mEnd, int nStart, int nEnd, const double *matrixEntries, int rStart, int rEnd, const double *vecRightLocal, int lStart, int lEnd, double *vecLeftLocal);
 
 typedef struct _dmv_option {
   const char *optname;

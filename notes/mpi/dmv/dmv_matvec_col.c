@@ -1,12 +1,13 @@
 #include "dmv.h"
 #include "dmv_impl.h"
 
-int DenseMatVec_ColPartition(Args args, int mStart, int mEnd, int nStart, int nEnd, const double *matrixEntries, int nLocal, const double *vecRightLocal, int mLocal, double *vecLeftLocal)
+int DenseMatVec_ColPartition(Args args, int mStart, int mEnd, int nStart, int nEnd, const double *matrixEntries, int rStart, int rEnd, const double *vecRightLocal, int lStart, int lEnd, double *vecLeftLocal)
 {
   double *vecLeft;
   int    *mLocals;
   int    size, err;
   int    mGlobal = mEnd - mStart;
+  int    nLocal = rEnd - rStart, mLocal = lEnd - lStart;
 
   err = MPI_Comm_size(args->comm, &size); MPI_CHK(err);
 
