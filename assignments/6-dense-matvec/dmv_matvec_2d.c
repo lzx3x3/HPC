@@ -1,7 +1,7 @@
 #include "dmv.h"
 #include "dmv_impl.h"
 
-int DenseMatVec_2dPartition(Args args, int mStart, int mEnd, int nStart, int nEnd, const double *matrixEntries, int rStart, int rEnd, const double *vecRightLocal, int lEnd, int lStart, double *vecLeftLocal)
+int DenseMatVec_2dPartition(Args args, int mStart, int mEnd, int nStart, int nEnd, const double *matrixEntries, int rStart, int rEnd, const double *vecRightLocal, int lStart, int lEnd, double *vecLeftLocal)
 {
   MPI_Comm comm = args->comm;
   int      size, rank, err;
