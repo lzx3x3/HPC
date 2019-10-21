@@ -5,6 +5,9 @@ int DenseMatVec_2dPartition(Args args, int mStart, int mEnd, int nStart, int nEn
 {
   MPI_Comm comm = args->comm;
   int      size, rank, err;
+//   printf("matrix_M: %d\n %d\n", rStart,rEnd);
+//   printf("matrix_V: %d\n %d\n", lStart,lEnd);
+  
 
   err = MPI_Comm_size(comm, &size); MPI_CHK(err);
   err = MPI_Comm_rank(comm, &rank); MPI_CHK(err);
