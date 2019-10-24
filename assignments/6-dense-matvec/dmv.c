@@ -54,11 +54,28 @@ int DMVCommGetRankCoordinates2D(MPI_Comm comm, int *num_rows_p, int *row_p, int 
   int num_cols, num_rows, col, row;
   int size, rank;
   int err;
+  int block[2];
+  block[0] = block[1] = 0;
+  /* TODO: HINT, lookup MPI_Dims_create() */
+  num_cols = num_rows = col = row = -1;
+    
   err = MPI_Comm_size(comm, &size); MPI_CHK(err);
   err = MPI_Comm_rank(comm, &rank); MPI_CHK(err);
-  num_cols = num_rows = col = row = -1;
-  /* TODO: HINT, lookup MPI_Dims_create() */
-  //printf("rank: %d\n", rank);
+    
+  // Use MPI_Dims_Create() to create the partion over the processors//  
+  MPI_Dims_create(size, 2, block);
+    
+  //Get the grid//  
+  num_cols = block[0];
+  num_rows = block[1];
+   
+  //Assign the processor rank cartesian coords based on column major order//
+  row = rank%num_cols;
+  col = rank/num_cols;
+
+//   printf("Process: %d\n block_r: %d\n block_c: %d\n coord_r: %d\n coord_c: %d\n ", rank, num_cols, num_rols,row,col);
+  
+  //Point to the output variables//
   *num_cols_p = num_cols;
   *num_rows_p = num_rows;
   *col_p = col;
@@ -78,13 +95,17 @@ int MatrixGetLocalRange2d(Args args, const int *lOffsets, const int *rOffsets, i
   int      size, rank;
   int      err;
   int num_rows_p, row_p, num_cols_p, col_p;
-  DMVCommGetRankCoordinates2D(comm, &num_rows_p, &row_p, &num_cols_p, &col_p);
-  printf("rank: %d\n", num_rows_p);
 
+
+
+  
+    
   /* initialize to bogus values */
   mStart = mEnd = nStart = nEnd = -1;
   err = MPI_Comm_size(comm, &size); MPI_CHK(err);
   err = MPI_Comm_rank(comm, &rank); MPI_CHK(err);
+  DMVCommGetRankCoordinates2D(comm, &num_rows_p, &row_p, &num_cols_p, &col_p);
+
   //printf("rank: %d\n", rank);
   /* TODO: compute mStart, mEnd, nStart, and nEnd. HINT: use DMVCommGetRankCoordinates2D() to get the
    * number of block columns and rows used to partition the matrix, mBlock and nBlock.
@@ -93,10 +114,21 @@ int MatrixGetLocalRange2d(Args args, const int *lOffsets, const int *rOffsets, i
    * The block column j should contain the same columns as are in the right
    * vector for ranks (j * mBlock, j * mBlock + 1, ..., (j + 1) * mBlock - 1).
    */
+   
+//    mStart = lOffsets[num_cols_p*col_p];
+//    mEnd = lOffsets[num_cols_p*(col_p+1)]-1;
+//    nStart = rOffsets[num_rows_p*row_p];
+//    nEnd = rOffsets[num_rows_p*(row_p+1)]-1;
+   mStart = lOffsets[num_rows_p*row_p];
+   mEnd = lOffsets[num_rows_p*(row_p+1)]-1;
+   nStart = rOffsets[num_cols_p*col_p];
+   nEnd = rOffsets[num_cols_p*(col_p+1)]-1;
+   
+  printf("current rank: %d mstart: %d mend: %d nstart: %d nend: %d\n",rank,mStart,mEnd,nStart,nEnd);
   *mStart_p = mStart;
   *mEnd_p   = mEnd;
-  *nStart_p = mStart;
-  *nEnd_p   = mEnd;
+  *nStart_p = nStart;
+  *nEnd_p   = nEnd;
   return 0;
 }
 
