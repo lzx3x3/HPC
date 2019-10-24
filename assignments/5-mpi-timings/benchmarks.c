@@ -126,8 +126,6 @@ int main(int argc, char **argv)
       double tic = -1;
 
       for (int t = 0; t < numTests + numSkip; t++) {
-        double tic = -1.;
-
         if (t == numSkip) {
           err = startTime(&tic); MPI_CHK(err);
         }
