@@ -66,13 +66,14 @@ int DMVCommGetRankCoordinates2D(MPI_Comm comm, int *num_rows_p, int *row_p, int 
   MPI_Dims_create(size, 2, block);
     
   //Get the grid//  
-  num_cols = block[0];
-  num_rows = block[1];
+  num_cols = block[1];
+  num_rows = block[0];
+
    
   //Assign the processor rank cartesian coords based on column major order//
-  row = rank%num_cols;
-  col = rank/num_cols;
-
+  row = rank%num_rows;
+  col = rank/num_rows;
+  //printf("rank %d col %d, row %d\n",rank, col, row); 
 //   printf("Process: %d\n block_r: %d\n block_c: %d\n coord_r: %d\n coord_c: %d\n ", rank, num_cols, num_rols,row,col);
   
   //Point to the output variables//
@@ -119,12 +120,12 @@ int MatrixGetLocalRange2d(Args args, const int *lOffsets, const int *rOffsets, i
 //    mEnd = lOffsets[num_cols_p*(col_p+1)]-1;
 //    nStart = rOffsets[num_rows_p*row_p];
 //    nEnd = rOffsets[num_rows_p*(row_p+1)]-1;
-   mStart = lOffsets[num_rows_p*row_p];
-   mEnd = lOffsets[num_rows_p*(row_p+1)]-1;
-   nStart = rOffsets[num_cols_p*col_p];
-   nEnd = rOffsets[num_cols_p*(col_p+1)]-1;
+   mStart = lOffsets[num_cols_p*row_p];
+   mEnd = lOffsets[num_cols_p*(row_p+1)]-1;
+   nStart = rOffsets[num_rows_p*col_p];
+   nEnd = rOffsets[num_rows_p*(col_p+1)]-1;
    
-  printf("current rank: %d mstart: %d mend: %d nstart: %d nend: %d\n",rank,mStart,mEnd,nStart,nEnd);
+  //printf("current rank: %d mstart: %d mend: %d nstart: %d nend: %d\n",rank,mStart,mEnd,nStart,nEnd);
   *mStart_p = mStart;
   *mEnd_p   = mEnd;
   *nStart_p = nStart;

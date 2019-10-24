@@ -41,7 +41,7 @@ int DenseMatVec_2dPartition(Args args, int mStart, int mEnd, int nStart, int nEn
   err = MPI_Comm_size(col_comm, &col_size); MPI_CHK(err);
   err = MPI_Comm_rank(col_comm, &col_rank); MPI_CHK(err);
     
-  printf("%d-th node:\tm: %d\t, n: %d\t, l: %d\t, r: %d\n", rank, mStart, nStart, lStart , rStart );
+ // printf("%d-th node:\tm: %d\t, n: %d\t, l: %d\t, r: %d\n", rank, mStart, nStart, lStart , rStart );
     
     
   /////////////////////////////////////////////////////////////////////////////////
@@ -51,51 +51,72 @@ int DenseMatVec_2dPartition(Args args, int mStart, int mEnd, int nStart, int nEn
   int         *nLocals;
   int         *nOffsets;
   int         nLocal = rEnd - rStart, mLocal = lEnd - lStart, lLocal = lEnd - lStart;
+    
   vecRight = (double *) malloc((nEnd-nStart) * sizeof(double));
   if (!vecRight) MPI_CHK(1);
   /* Get the counts for every process */
-  nLocals = (int *) malloc(num_rows_p* sizeof(int));
+  nLocals = (int *) malloc(num_cols_p* sizeof(int));
   if (!nLocals) MPI_CHK(1);
   /* Get the offsets for every process */
-  nOffsets = (int *) malloc((num_rows_p + 1) * sizeof(int));
+  nOffsets = (int *) malloc((num_cols_p + 1) * sizeof(int));
   if (!nOffsets) MPI_CHK(1);
 
   /* Gather the counts for every process */
   err = MPI_Allgather(&nLocal, 1, MPI_INT, nLocals, 1, MPI_INT, col_comm); MPI_CHK(err);
   /* Turn the counts into the offsets */
   nOffsets[0] = 0;
-  for (int q = 0; q < num_rows_p; q++) {
+  for (int q = 0; q < num_cols_p; q++) {
     nOffsets[q + 1] = nOffsets[q] + nLocals[q];
   }
   /* Gather the whole vector on each process */
   err = MPI_Allgatherv(vecRightLocal, nLocal, MPI_DOUBLE, vecRight, nLocals, nOffsets, MPI_DOUBLE, col_comm); MPI_CHK(err);
- 
-  for (int j = 0; j <  nLocal; j++) {
+  
+    
+    
+  double *vecLeft; // local result
+  vecLeft = (double *)malloc((mEnd - mStart) * sizeof(double));
+  if (!vecLeft)
+    MPI_CHK(1);
+  for (int j = 0; j <  mLocal; j++) {
     double val = 0.;
-    for (int k = 0; k < mLocal; k++) {
-      val += matrixEntries[j * mLocal + k] * vecRight[k];
+    for (int k = 0; k < nLocal; k++) {
+      val += matrixEntries[j * nLocal + k] * vecRight[k];
     }
-    vecLeftLocal[j] += val;
+    vecLeft[j] += val;
   }
+    
+    
     int origin_rank = row_p*num_cols_p+col_p;
-    int dest_rank = origin_rank/num_cols_p+origin_rank%num_cols_p*num_rows_p;
+    int dest_rank = num_rows_p*((col_p*num_rows_p+row_p)%num_cols_p)+((col_p*num_rows_p+row_p)/num_cols_p);
     err = MPI_Sendrecv_replace(&lLocal, 1, MPI_INT, dest_rank, 100, origin_rank, 100, comm, MPI_STATUS_IGNORE);
   MPI_CHK(err);
-    err = MPI_Reduce_scatter(MPI_IN_PLACE, vecLeft, lLocals, MPI_DOUBLE, MPI_SUM, rowComm);
+
+    
+    
+  int *lLocals;
+  lLocals = (int *)malloc(num_rows_p * sizeof(int));
+  if (!lLocals)
+    MPI_CHK(1);
+  err = MPI_Allgather(&lLocal, 1, MPI_INT, lLocals, 1, MPI_INT, row_comm);
   MPI_CHK(err);
     
-//   err = MPI_Sendrecv_replace(&lLocal, 1, MPI_INT, buddy_to, 100, buddy_from, 100, comm, MPI_STATUS_IGNORE);
-//   MPI_CHK(err);  
-//   err = MPI_Reduce_scatter(MPI_IN_PLACE, vecLeft, lLocals, MPI_DOUBLE, MPI_SUM, rowComm);
-//   MPI_CHK(err);
 
-//   // printf("I am %d and lLocal: %d, lEnd-Start: %d\n", rank, lLocal, lEnd - lStart);
-//   err = MPI_Sendrecv(vecLeft, lLocal, MPI_DOUBLE, buddy_from, 100,
-//                      vecLeftLocal, lEnd - lStart, MPI_DOUBLE, buddy_to, 100, comm, MPI_STATUS_IGNORE);
-//   MPI_CHK(err);  
     
     
+    err = MPI_Reduce_scatter(MPI_IN_PLACE, vecLeftLocal, lLocals, MPI_DOUBLE, MPI_SUM, row_comm);
+  MPI_CHK(err);
     
+
+  // printf("I am %d and lLocal: %d, lEnd-Start: %d\n", rank, lLocal, lEnd - lStart);
+  err = MPI_Sendrecv(vecLeft, lLocal, MPI_DOUBLE, origin_rank, 100,
+                     vecLeftLocal, lEnd - lStart, MPI_DOUBLE, dest_rank, 100, comm, MPI_STATUS_IGNORE);
+  MPI_CHK(err);  
+    
+    
+  err = MPI_Comm_free(&row_comm);
+  MPI_CHK(err);
+  err = MPI_Comm_free(&col_comm);
+  MPI_CHK(err); 
     
   free(vecRight);
   free(nLocals);
