@@ -5,48 +5,37 @@
 #include "dmv.h"
 #include "dmv_impl.h"
 
-enum
-{
-  FILL_MATRIX,
-  FILL_VECTOR
-};
+enum {FILL_MATRIX, FILL_VECTOR};
 
 int VectorsGetLocalSize(Args args, int *local_m, int *local_n)
 {
   int scale = args->scale;
-  int targetGlobalSize = (int)pow(2., scale);
+  int targetGlobalSize = (int) pow(2., scale);
   int mGlobal, nGlobal, iStart, iEnd, jStart, jEnd, m, n;
   int size, rank, err;
 
-  err = MPI_Comm_size(args->comm, &size);
-  MPI_CHK(err);
-  err = MPI_Comm_rank(args->comm, &rank);
-  MPI_CHK(err);
+  err = MPI_Comm_size (args->comm, &size); MPI_CHK(err);
+  err = MPI_Comm_rank (args->comm, &rank); MPI_CHK(err);
 
-  mGlobal = (int)pow(2., scale / 2);
+  mGlobal = (int) pow(2., scale / 2);
   nGlobal = targetGlobalSize / mGlobal;
 
-  if (args->verbosity)
-    MPI_LOG(args->comm, "Random matrix: target global size %d x %d\n", mGlobal, nGlobal);
+  if (args->verbosity) MPI_LOG(args->comm, "Random matrix: target global size %d x %d\n", mGlobal, nGlobal);
 
   iStart = (rank * mGlobal) / size;
-  iEnd = ((rank + 1) * mGlobal) / size;
+  iEnd   = ((rank + 1) * mGlobal) / size;
   jStart = (rank * nGlobal) / size;
-  jEnd = ((rank + 1) * nGlobal) / size;
+  jEnd   = ((rank + 1) * nGlobal) / size;
 
   m = iEnd - iStart;
   n = jEnd - jStart;
 
-  if (args->verbosity > 1)
-  {
-    for (int i = 0; i < size; i++)
-    {
-      if (rank == i)
-      {
+  if (args->verbosity > 1) {
+    for (int i = 0; i < size; i++) {
+      if (rank == i) {
         MPI_LOG(MPI_COMM_SELF, "Random matrix: local size %d x %d\n", m, n);
       }
-      err = MPI_Barrier(args->comm);
-      MPI_CHK(err);
+      err = MPI_Barrier(args->comm); MPI_CHK(err);
     }
   }
 
@@ -63,70 +52,63 @@ int VectorsGetLocalSize(Args args, int *local_m, int *local_n)
 int DMVCommGetRankCoordinates2D(MPI_Comm comm, int *num_rows_p, int *row_p, int *num_cols_p, int *col_p)
 {
   int num_cols, num_rows, col, row;
+  int size, rank, err;
+  int dims[2]= {0, 0};
+  
+  err = MPI_Comm_size(comm, &size); MPI_CHK(err);
+  err = MPI_Comm_rank(comm, &rank); MPI_CHK(err);
+    
   num_cols = num_rows = col = row = -1;
-  int err;
-
-  int size, rank;
-  err = MPI_Comm_size(comm, &size);
-  MPI_CHK(err);
-  err = MPI_Comm_rank(comm, &rank);
-  MPI_CHK(err);
-
-  /* HINT, lookup MPI_Dims_create() */
-  int dims[2] = {0};
-  err = MPI_Dims_create(size, 2, dims);
+  /* TODO: HINT, lookup MPI_Dims_create() */
+  MPI_Dims_create(size , 2, dims);
   num_cols = dims[1];
   num_rows = dims[0];
-
   col = rank/num_rows;
   row = rank%num_rows;
+  
   *num_cols_p = num_cols;
   *num_rows_p = num_rows;
   *col_p = col;
   *row_p = row;
-
-  // printf("Rows: %d, Cols: %d. The %d-th node have (r, c): (%d, %d)\n", *num_rows_p, *num_cols_p, rank, *row_p, *col_p);
   return 0;
 }
 
 /* Given arguments (which include a communicator, args->comm),
  * offsets for each rank in the left and right vectors compatible with a matrix (lOffsets and rOffsets),
- * compute which entries in the matrix this MPI rank will own, given by the column ranges [mStart, mEnd) and row ranges [nStart, nEnd) */
+ * compute which entries in the matrix this MPI rank will own, given by the row ranges [mStart, mEnd) and column ranges [nStart, nEnd) */
 int MatrixGetLocalRange2d(Args args, const int *lOffsets, const int *rOffsets, int *mStart_p, int *mEnd_p, int *nStart_p, int *nEnd_p)
 {
   MPI_Comm comm = args->comm;
-
-  int size, rank;
-  int err;
+  int      mStart, mEnd, nStart, nEnd;
+  int      size, rank;
+  int      err;
+  int num_cols, num_rows, col, row;
 
   /* initialize to bogus values */
-
-  err = MPI_Comm_size(comm, &size);
-  MPI_CHK(err);
-  err = MPI_Comm_rank(comm, &rank);
-  MPI_CHK(err);
-  /* compute mStart, mEnd, nStart, and nEnd. HINT: use DMVCommGetRankCoordinates2D() to get the
+  mStart = mEnd = nStart = nEnd = -1;
+  err = MPI_Comm_size(comm, &size); MPI_CHK(err);
+  err = MPI_Comm_rank(comm, &rank); MPI_CHK(err);
+  /* TODO: compute mStart, mEnd, nStart, and nEnd. HINT: use DMVCommGetRankCoordinates2D() to get the
    * number of block columns and rows used to partition the matrix, mBlock and nBlock.
    * The block row i should contain the same rows as are in the left vector for
    * ranks (i * nBlock, i * nBlock + 1, ..., (i + 1) * nBlock - 1).
    * The block column j should contain the same columns as are in the right
    * vector for ranks (j * mBlock, j * mBlock + 1, ..., (j + 1) * mBlock - 1).
    */
-  int numCols, numRows, myRow, myCol;
-  numCols = numRows = myRow = myCol = -1;
-  err = DMVCommGetRankCoordinates2D(args->comm, &numRows, &myRow, &numCols, &myCol);
-  MPI_CHK(err);
 
-  *nStart_p = rOffsets[myCol * numRows];
-  *nEnd_p = rOffsets[(myCol + 1) * numRows];
-  *mStart_p = lOffsets[myRow * numCols];
-  *mEnd_p = lOffsets[(myRow + 1) * numCols];
+  DMVCommGetRankCoordinates2D(comm, &num_rows, &row, &num_cols, &col);
+  
+  mStart = lOffsets[row*num_cols];
+  mEnd = lOffsets[(row+1)*num_cols];
+  nStart = rOffsets[col*num_rows]; 
+  nEnd = rOffsets[(col+1)*num_rows];
+  //if(rank==0) printf("num_row:%d, num_col:%d\n", num_rows, num_cols);
+  //printf("%d; m: %d:%d, n:%d:%d\n", rank, mStart, mEnd, nStart, nEnd); //debug
 
-  int verbose = args->verbosity;
-  if (verbose)
-  {
-    printf("%d-th node: row (%d, %d), col (%d, %d)\n", rank, *mStart_p, *mEnd_p, *nStart_p, *nEnd_p);
-  }
+  *mStart_p = mStart;
+  *mEnd_p   = mEnd;
+  *nStart_p = nStart;
+  *nEnd_p   = nEnd;
   return 0;
 }
 
@@ -137,23 +119,20 @@ int MatrixGetEntries(Args args, int rowStart, int rowEnd, int colStart, int colE
 
   count.v[0] = FILL_MATRIX;
 
-  for (int i = rowStart; i < rowEnd; i++)
-  {
+  for (int i = rowStart; i < rowEnd; i++) {
     count.v[1] = i;
-    for (int j = (colStart / 4) * 4; j < colEnd; j += 4)
-    {
+    for (int j = (colStart / 4) * 4; j < colEnd; j += 4) {
       threefry4x64_ctr_t val;
       int kStart, kEnd;
       double scale = 1. / (UINT64_MAX + 1.);
       double shift = 0.5 * scale;
 
       count.v[1] = j;
-      val = threefry4x64(count, args->key);
+      val = threefry4x64(count,args->key);
 
       kStart = j < colStart ? colStart : j;
-      kEnd = j + 4 > colEnd ? colEnd : j + 4;
-      for (int k = kStart; k < kEnd; k++)
-      {
+      kEnd   = j + 4 > colEnd ? colEnd : j + 4;
+      for (int k = kStart; k < kEnd; k++) {
         entries[colDim * (i - rowStart) + (k - colStart)] = 2. * (scale * val.v[k - j] + shift) - 1.;
       }
     }
@@ -168,20 +147,18 @@ int VecGetEntries(Args args, int colStart, int colEnd, double *entries)
 
   count.v[0] = FILL_VECTOR;
 
-  for (int j = (colStart / 4) * 4; j < colEnd; j += 4)
-  {
+  for (int j = (colStart / 4) * 4; j < colEnd; j += 4) {
     threefry4x64_ctr_t val;
     int kStart, kEnd;
     double scale = 1. / (UINT64_MAX + 1.);
     double shift = 0.5 * scale;
 
     count.v[1] = j;
-    val = threefry4x64(count, args->key);
+    val = threefry4x64(count,args->key);
 
     kStart = j < colStart ? colStart : j;
-    kEnd = j + 4 > colEnd ? colEnd : j + 4;
-    for (int k = kStart; k < kEnd; k++)
-    {
+    kEnd   = j + 4 > colEnd ? colEnd : j + 4;
+    for (int k = kStart; k < kEnd; k++) {
       entries[k - colStart] = 2. * (scale * val.v[k - j] + shift) - 1.;
     }
   }
@@ -189,3 +166,6 @@ int VecGetEntries(Args args, int colStart, int colEnd, double *entries)
 
   return 0;
 }
+
+
+

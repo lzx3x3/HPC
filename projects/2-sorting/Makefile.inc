@@ -1,0 +1,4 @@
+
+CFLAGS += -fopenmp
+LINKER += -fopenmp
+
