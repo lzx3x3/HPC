@@ -152,9 +152,9 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, MPI_Comm comm
     uint64_t oldOffset, newOffset;
     MPI_Request *recv_reqs, *send_reqs;
     int firstRecv = -1;
-    int lastRecv = -2;
+    int lastRecv = -1;
     int firstSend = -1;
-    int lastSend = -2;
+    int lastSend = -1;
     int nRecvs, nSends;
     uint64_t thisOffset;
 
