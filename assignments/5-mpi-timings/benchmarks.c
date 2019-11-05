@@ -134,6 +134,7 @@ int main(int argc, char **argv)
     for (int numBytes = 8; numBytes <= maxSize; numBytes *= 8) 
     {
       double tic = -1;
+<<<<<<< HEAD
       double timeAvg = 0.;
       long long int totalNumBytes = numBytes * numComm; 
       //double tic = -1;//
@@ -144,6 +145,12 @@ int main(int argc, char **argv)
         {
           err = startTime(&tic); 
           MPI_CHK(err);
+=======
+
+      for (int t = 0; t < numTests + numSkip; t++) {
+        if (t == numSkip) {
+          err = startTime(&tic); MPI_CHK(err);
+>>>>>>> 0ea20d4143a4070cedb7f6b029a3aaeab2b37542
         }
         if (rank < numComm) {
           if (rank < numComm / 2) {

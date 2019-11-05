@@ -52,9 +52,20 @@ int VectorsGetLocalSize(Args args, int *local_m, int *local_n)
 int DMVCommGetRankCoordinates2D(MPI_Comm comm, int *num_rows_p, int *row_p, int *num_cols_p, int *col_p)
 {
   int num_cols, num_rows, col, row;
-
+  int size, rank, err;
+  int dims[2]= {0, 0};
+  
+  err = MPI_Comm_size(comm, &size); MPI_CHK(err);
+  err = MPI_Comm_rank(comm, &rank); MPI_CHK(err);
+    
   num_cols = num_rows = col = row = -1;
   /* TODO: HINT, lookup MPI_Dims_create() */
+  MPI_Dims_create(size , 2, dims);
+  num_cols = dims[1];
+  num_rows = dims[0];
+  col = rank/num_rows;
+  row = rank%num_rows;
+  
   *num_cols_p = num_cols;
   *num_rows_p = num_rows;
   *col_p = col;
@@ -64,13 +75,14 @@ int DMVCommGetRankCoordinates2D(MPI_Comm comm, int *num_rows_p, int *row_p, int 
 
 /* Given arguments (which include a communicator, args->comm),
  * offsets for each rank in the left and right vectors compatible with a matrix (lOffsets and rOffsets),
- * compute which entries in the matrix this MPI rank will own, given by the column ranges [mStart, mEnd) and row ranges [nStart, nEnd) */
+ * compute which entries in the matrix this MPI rank will own, given by the row ranges [mStart, mEnd) and column ranges [nStart, nEnd) */
 int MatrixGetLocalRange2d(Args args, const int *lOffsets, const int *rOffsets, int *mStart_p, int *mEnd_p, int *nStart_p, int *nEnd_p)
 {
   MPI_Comm comm = args->comm;
   int      mStart, mEnd, nStart, nEnd;
   int      size, rank;
   int      err;
+  int num_cols, num_rows, col, row;
 
   /* initialize to bogus values */
   mStart = mEnd = nStart = nEnd = -1;
@@ -83,10 +95,20 @@ int MatrixGetLocalRange2d(Args args, const int *lOffsets, const int *rOffsets, i
    * The block column j should contain the same columns as are in the right
    * vector for ranks (j * mBlock, j * mBlock + 1, ..., (j + 1) * mBlock - 1).
    */
+
+  DMVCommGetRankCoordinates2D(comm, &num_rows, &row, &num_cols, &col);
+  
+  mStart = lOffsets[row*num_cols];
+  mEnd = lOffsets[(row+1)*num_cols];
+  nStart = rOffsets[col*num_rows]; 
+  nEnd = rOffsets[(col+1)*num_rows];
+  //if(rank==0) printf("num_row:%d, num_col:%d\n", num_rows, num_cols);
+  //printf("%d; m: %d:%d, n:%d:%d\n", rank, mStart, mEnd, nStart, nEnd); //debug
+
   *mStart_p = mStart;
   *mEnd_p   = mEnd;
-  *nStart_p = mStart;
-  *nEnd_p   = mEnd;
+  *nStart_p = nStart;
+  *nEnd_p   = nEnd;
   return 0;
 }
 

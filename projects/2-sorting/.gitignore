@@ -1,0 +1,3 @@
+*.o
+libproj2.so
+test_proj2
