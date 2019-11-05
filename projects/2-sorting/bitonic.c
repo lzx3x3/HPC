@@ -5,12 +5,25 @@
 #include "proj2sorter.h"
 #include "proj2sorter_impl.h"
 
-static int uint64_swap_bitonic(Proj2Sorter sorter, size_t nkeys, uint64_t * keys, int level, int rank, int direction)
+static int uint64_swap_bitonic(Proj2Sorter sorter, size_t nkeys, uint64_t * keys, int start, int end, int rank, int direction)
 {
   uint64_t    *recv;
   MPI_Request recv_req;
-  int         comm_rank = rank ^ (1 << level);
+  int         comm_rank;
   int         err;
+  int         diff = end - start;
+  int         pow2 = 1;
+  int         split;
+
+  pow2 = 1;
+  while (2 * pow2 < diff) pow2 *= 2;
+  split = start + pow2;
+  comm_rank = (rank < split) ? (rank + pow2) : (rank - pow2);
+
+  if (comm_rank >= end) return 0;
+#if defined(LOG_BITONIC)
+  PROJ2LOG(MPI_COMM_SELF,"<--> [%d]\n",comm_rank);
+#endif
 
   err = Proj2SorterGetWorkArray(sorter, nkeys, sizeof(uint64_t), &recv); PROJ2CHK(err);
   err = MPI_Irecv(recv, nkeys, MPI_UINT64_T, comm_rank, PROJ2TAG_BITONIC, sorter->comm, &recv_req); MPI_CHK(err);
@@ -29,11 +42,16 @@ static int uint64_swap_bitonic(Proj2Sorter sorter, size_t nkeys, uint64_t * keys
   return 0;
 }
 
-static int uint64_sort_bitonic(Proj2Sorter sorter, size_t nkeys, uint64_t *keys, int level, int rank, int direction, int input_bitonic)
+static int uint64_sort_bitonic(Proj2Sorter sorter, size_t nkeys, uint64_t *keys, int start, int end, int rank, int direction, int input_bitonic)
 {
   int err;
+  int diff = end - start;
 
-  if (level == 0) {
+#if defined(LOG_BITONIC)
+  if (diff > 1 && rank == start) PROJ2LOG(MPI_COMM_SELF,"[%d, %d),%zu,%d,%d\n",start, end, nkeys, direction, input_bitonic);
+#endif
+
+  if (diff == 1) {
     if (!input_bitonic) {
       err = Proj2SorterSortLocal(sorter, nkeys, keys, direction); PROJ2CHK(err);
     } else if (nkeys > 1) {
@@ -74,16 +92,43 @@ static int uint64_sort_bitonic(Proj2Sorter sorter, size_t nkeys, uint64_t *keys,
           shift--;
         }
       }
-      err = uint64_sort_bitonic(sorter, limit, keys, 0, rank, direction, 1); PROJ2CHK(err);
-      err = uint64_sort_bitonic(sorter, shift, &keys[limit], 0, rank, direction, 1); PROJ2CHK(err);
+      err = uint64_sort_bitonic(sorter, limit, keys, start, end, rank, direction, 1); PROJ2CHK(err);
+      err = uint64_sort_bitonic(sorter, shift, &keys[limit], start, end, rank, direction, 1); PROJ2CHK(err);
     }
     return 0;
   }
   if (!input_bitonic) {
-    err = uint64_sort_bitonic(sorter, nkeys, keys, level - 1, rank, direction ^ ((rank >> (level - 1)) & 1), input_bitonic); PROJ2CHK(err);
+    int mid = start + diff / 2;
+    int next_direction = (rank < mid) ? !direction : direction;
+    int next_start = (rank < mid) ? start : mid;
+    int next_end = (rank < mid) ? mid : end;
+
+#if defined(LOG_BITONIC)
+    if (next_end - next_start == 1 && rank == next_start) PROJ2LOG(MPI_COMM_SELF,"[%d, %d),%zu,%d,0\n",next_start, next_end, nkeys, next_direction);
+#endif
+    err = uint64_sort_bitonic(sorter, nkeys, keys, next_start, next_end, rank, next_direction, input_bitonic); PROJ2CHK(err);
+#if defined(LOG_BITONIC)
+    if (diff > 1 && rank == start) PROJ2LOG(MPI_COMM_SELF,"[%d, %d),%zu,%d,1\n",start, end, nkeys, direction);
+#endif
   }
-  err = uint64_swap_bitonic(sorter, nkeys, keys, level - 1, rank, direction); PROJ2CHK(err);
-  err = uint64_sort_bitonic(sorter, nkeys, keys, level - 1, rank, direction, 1); PROJ2CHK(err);
+  err = uint64_swap_bitonic(sorter, nkeys, keys, start, end, rank, direction); PROJ2CHK(err);
+  {
+    int pow2 = 1;
+    int split;
+    int next_start;
+    int next_end;
+
+    pow2 = 1;
+    while (2 * pow2 < diff) pow2 *= 2;
+    split = start + pow2;
+    next_start = (rank < split) ? start : split;
+    next_end = (rank < split) ? split : end;
+
+#if defined(LOG_BITONIC)
+    if (next_end - next_start == 1 && rank == next_start) PROJ2LOG(MPI_COMM_SELF,"[%d, %d),%zu,%d,1\n",next_start, next_end, nkeys, direction);
+#endif
+    err = uint64_sort_bitonic(sorter, nkeys, keys, next_start, next_end, rank, direction, 1); PROJ2CHK(err);
+  }
 
   return 0;
 }
@@ -92,17 +137,13 @@ int Proj2SorterSortBitonic(Proj2Sorter sorter, size_t nkeys, int uniform, uint64
 {
   MPI_Comm comm = sorter->comm;
   int      size, rank;
-  int      log2Size;
   int      err;
 
   err = MPI_Comm_size(comm, &size); MPI_CHK(err);
   err = MPI_Comm_rank(comm, &rank); MPI_CHK(err);
 
-  log2Size = (int) log2((double) size);
-  /* Bitonic sort is designed for power of 2 number of processes */
-  if (size != (1 << log2Size)) {PROJ2ERR(comm,1,"Cannot use bitonic sort on %d processes\n",size);}
   if (!uniform) {PROJ2ERR(comm,1,"Cannot use bitonic sort on non-uniform distributions\n");}
-  err = uint64_sort_bitonic(sorter, nkeys, keys, log2Size, rank, PROJ2SORT_FORWARD, 0); PROJ2CHK(err);
+  err = uint64_sort_bitonic(sorter, nkeys, keys, 0, size, rank, PROJ2SORT_FORWARD, 0); PROJ2CHK(err);
 
   return 0;
 }
