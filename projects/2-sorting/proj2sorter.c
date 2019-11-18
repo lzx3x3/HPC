@@ -1,5 +1,6 @@
 #include <math.h>
 #include <string.h>
+#include <stdlib.h>
 #include "proj2sorter.h"
 #include "proj2sorter_impl.h"
 
@@ -7,12 +8,54 @@ int Proj2SorterCreate(MPI_Comm comm, Proj2Sorter *sorter_p)
 {
   Proj2Sorter sorter = NULL;
   int err;
-
+  //
+  int rank, size, color;
+  err = MPI_Comm_rank(comm, &rank);
+  MPI_CHK(err);
+  err = MPI_Comm_size(comm, &size);
+  MPI_CHK(err);
+    
+  int depth = 0, numCommm_require = 0;
+  MPI_Comm comm1 = comm, comm2;
+    
   err = PROJ2MALLOC(1,&sorter); PROJ2CHK(err);
   memset(sorter, 0, sizeof(*sorter));
+  
+    
+    
+  size--;
+  while(size>0)
+  {
+  numComm_require++;
+  size >>=1;
+  }
+  numComm_require++;
+    
+  sorter->comms = (MPI_Comm *)malloc(numComm_require * sizeof(MPI_Comm));
 
+  err = MPI_Comm_size(comm, &size);
+  MPI_CHK(err);
+  do
+  {
+    sorter->comms[depth++] = comm1;
+    err = MPI_Comm_rank(comm1, &rank);
+    MPI_CHK(err);
+    color = (rank >= (size / 2));
+    err = MPI_Comm_split(comm1, color, rank, &comm2);
+    PROJ2CHK(err);
+    err = MPI_Comm_size(comm2, &size);
+    MPI_CHK(err);
+    comm1 = comm2;
+  } while (size > 1);
+  sorter->comms[depth++] = comm1;  
+    
+    
+    
+    
+    
+    
+  
   sorter->comm = comm;
-
   *sorter_p = sorter;
   return 0;
 }
@@ -31,6 +74,9 @@ int Proj2SorterDestroy(Proj2Sorter *sorter_p)
     err = PROJ2FREE(&next); PROJ2CHK(err);
     next = nnext;
   }
+  //
+  free(sorter->comms); 
+  //
   err = PROJ2FREE(sorter_p); PROJ2CHK(err);
 
   return 0;
@@ -49,7 +95,8 @@ int Proj2SorterGetWorkArray(Proj2Sorter sorter, size_t num, size_t size, void *w
   if (!next) {
     err = PROJ2MALLOC(1,&next); PROJ2CHK(err);
     memset(next, 0, sizeof(*next));
-  } else { /* pop next from available */
+  } 
+  else { /* pop next from available */
     sorter->avail = next->next;
   }
   if (next->size < num * size) {
@@ -78,7 +125,8 @@ int Proj2SorterRestoreWorkArray(Proj2Sorter sorter, size_t num, size_t size, voi
     prev = &(next->next);
     next = next->next;
   }
-  if (!next) PROJ2ERR(MPI_COMM_SELF, 3, "Unable to locate restoring work array.\n");
+  if (!next) 
+  PROJ2ERR(MPI_COMM_SELF, 3, "Unable to locate restoring work array.\n");
   *prev = next->next;
   next->next = sorter->avail;
   sorter->avail = next;
