@@ -4,15 +4,65 @@
 #include "proj2sorter_impl.h"
 /* A basic strategy to choose a pivot is to have the root broadcast its
  * median entry, and hope it will be close to the median for all processes */
-static int ChoosePivot(Proj2Sorter sorter, MPI_Comm comm, size_t numKeysLocal, uint64_t *keys, uint64_t *pivot_p)
+// static int ChoosePivot(Proj2Sorter sorter, MPI_Comm comm, size_t numKeysLocal, uint64_t *keys, uint64_t *pivot_p)
+// {
+//   int      err;
+//   uint64_t pivot = 0;
+//   if (numKeysLocal) {
+//     pivot = keys[numKeysLocal / 2];
+//   }
+//   err = MPI_Bcast(&pivot, 1, MPI_UINT64_T, 0, comm); MPI_CHK(err);
+//   *pivot_p = pivot;
+//   return 0;
+// }
+
+
+static int ChoosePivot_op(Proj2Sorter sorter, MPI_Comm comm, size_t numKeysLocal, uint64_t *keys, uint64_t *pivot_p)
 {
-  int      err;
+  int      err, size, rank;
   uint64_t pivot = 0;
-  if (numKeysLocal) {
+  uint64_t *pivotArr = NULL;
+  uint64_t *pivotArrGlobal = NULL;
+
+  err = MPI_Comm_size(comm, &size); PROJ2CHK(err);
+  err = MPI_Comm_rank(comm, &rank); PROJ2CHK(err);
+
+  if (size == 1) {
     pivot = keys[numKeysLocal / 2];
+    *pivot_p = pivot;
+    return 0;
   }
+
+  err = Proj2SorterGetWorkArray(sorter, size, sizeof(uint64_t), &pivotArr); PROJ2CHK(err);
+  err = Proj2SorterGetWorkArray(sorter, size * size, sizeof(uint64_t), &pivotArrGlobal); PROJ2CHK(err);
+
+  // find multiple pivots and gather
+  if (numKeysLocal) {
+    int interval = numKeysLocal / size;
+    int idx = 0;
+    for (int i = 0; i < size; i++) {
+      pivotArr[i] = keys[idx];
+      idx += interval;
+    }
+  } else {
+    memset(pivotArr, 0, sizeof(uint64_t) * size);
+  }
+
+  err = MPI_Gather(pivotArr, size, MPI_UINT64_T, pivotArrGlobal, size, MPI_UINT64_T, 0, comm); MPI_CHK(err);
+  // sort global pivot list and find median
+  if (rank == 0) {
+    err = Proj2SorterSortLocal(sorter, size * size, pivotArrGlobal, PROJ2SORT_FORWARD); PROJ2CHK(err);
+    pivot = pivotArrGlobal[(size * size) / 2];
+  }
+  // broadcast median to all processes
   err = MPI_Bcast(&pivot, 1, MPI_UINT64_T, 0, comm); MPI_CHK(err);
+
+  // cleanup
+  err = Proj2SorterRestoreWorkArray(sorter, size, sizeof(uint64_t), &pivotArr); PROJ2CHK(err);
+  err = Proj2SorterRestoreWorkArray(sorter, size * size, sizeof(uint64_t), &pivotArrGlobal); PROJ2CHK(err);
+
   *pivot_p = pivot;
+
   return 0;
 }
 /* instead of finding a perfect match, use this comparison operation to find
@@ -61,7 +111,8 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, size_t numKey
     /* base case: nothing to do */
     return 0;
   }
-  err = ChoosePivot(sorter, comm, numKeysLocal, keys, &pivot); PROJ2CHK(err);
+//   err = ChoosePivot(sorter, comm, numKeysLocal, keys, &pivot); PROJ2CHK(err);
+  err = ChoosePivot_op(sorter, comm, numKeysLocal, keys, &pivot); PROJ2CHK(err);
   lower_half = NULL;
   upper_half = NULL;
   lower_size = 0;
