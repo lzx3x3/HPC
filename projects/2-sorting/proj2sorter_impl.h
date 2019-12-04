@@ -17,6 +17,7 @@ struct _proj2sorter
   MPI_Comm     comm;
   Proj2MemLink avail;
   Proj2MemLink inUse;
+  MPI_Comm* subComms;
 };
 
 /* A parallel sort implementation based on divide and conquer, by choosing a

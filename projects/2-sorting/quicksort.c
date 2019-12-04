@@ -1,15 +1,14 @@
 #include <stdlib.h>
 #include <string.h>
+
 #include "proj2sorter.h"
 #include "proj2sorter_impl.h"
-
 /* A basic strategy to choose a pivot is to have the root broadcast its
  * median entry, and hope it will be close to the median for all processes */
 static int ChoosePivot(Proj2Sorter sorter, MPI_Comm comm, size_t numKeysLocal, uint64_t *keys, uint64_t *pivot_p)
 {
   int      err;
   uint64_t pivot = 0;
-
   if (numKeysLocal) {
     pivot = keys[numKeysLocal / 2];
   }
@@ -17,7 +16,6 @@ static int ChoosePivot(Proj2Sorter sorter, MPI_Comm comm, size_t numKeysLocal, u
   *pivot_p = pivot;
   return 0;
 }
-
 /* instead of finding a perfect match, use this comparison operation to find
  * when a key fits between two entries in an array */
 static int uint64_compare_pair(const void *key, const void *array)
@@ -29,7 +27,8 @@ static int uint64_compare_pair(const void *key, const void *array)
   return 1;
 }
 
-static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, MPI_Comm comm, size_t numKeysLocal, uint64_t *keys)
+
+static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, size_t numKeysLocal, uint64_t *keys, int cnt)
 {
   uint64_t pivot = 0;
   uint64_t *lower_half, *upper_half;
@@ -39,13 +38,21 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, MPI_Comm comm
   int      color;
   int      size, rank;
   int      equivRank;
-  MPI_Comm subcomm;
+
+  MPI_Comm comm;
   int      err;
 
+
+  comm = sorter->subComms[cnt];
   err = MPI_Comm_size(comm, &size); PROJ2CHK(err);
   err = MPI_Comm_rank(comm, &rank); PROJ2CHK(err);
+
+
+
   /* sort locally up front */
   err = Proj2SorterSortLocal(sorter, numKeysLocal, keys, PROJ2SORT_FORWARD); PROJ2CHK(err);
+
+
   if (size == 1) {
     /* base case: nothing to do */
     return 0;
@@ -75,7 +82,6 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, MPI_Comm comm
       upper_size = numKeysLocal - lower_size;
     }
   }
-
   /* color the upper half to split the communicator */
   color = (rank >= (size / 2));
   equivRank = color ? (rank - (size / 2)) : (rank + (size / 2));
@@ -83,10 +89,8 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, MPI_Comm comm
     /* Easy case: matched send and receive */
     MPI_Request sendreq;
     MPI_Status  recvstatus;
-
     if (equivRank > rank) {
       int numIncoming;
-
       err = MPI_Isend(upper_half, (int) upper_size, MPI_UINT64_T, equivRank, PROJ2TAG_QUICKSORT, comm, &sendreq); MPI_CHK(err);
       err = MPI_Probe(equivRank, PROJ2TAG_QUICKSORT, comm, &recvstatus); MPI_CHK(err);
       err = MPI_Get_count(&recvstatus, MPI_UINT64_T, &numIncoming); MPI_CHK(err);
@@ -97,7 +101,6 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, MPI_Comm comm
       err = MPI_Wait(&sendreq, MPI_STATUS_IGNORE); MPI_CHK(err);
     } else {
       int numIncoming;
-
       err = MPI_Isend(lower_half, (int) lower_size, MPI_UINT64_T, equivRank, PROJ2TAG_QUICKSORT, comm, &sendreq); MPI_CHK(err);
       err = MPI_Probe(equivRank, PROJ2TAG_QUICKSORT, comm, &recvstatus); MPI_CHK(err);
       err = MPI_Get_count(&recvstatus, MPI_UINT64_T, &numIncoming); MPI_CHK(err);
@@ -111,13 +114,11 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, MPI_Comm comm
   if (size % 2) { /* odd number of processes: size - 1 has been left out */
     MPI_Request sendreq;
     MPI_Status  recvstatus;
-
     /* (size - 1) sends its lower half to (size / 2) - 1 */
     if (rank == (size / 2) - 1) {
       int numIncoming;
       size_t numKeysLocalNewNew;
       uint64_t *keysNewNew;
-
       /* concatenate the addition from (size - 1) to the already constructed
        * keysNew */
       err = MPI_Probe(size - 1, PROJ2TAG_QUICKSORT, comm, &recvstatus); MPI_CHK(err);
@@ -138,9 +139,12 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, MPI_Comm comm
       err = MPI_Wait(&sendreq, MPI_STATUS_IGNORE); MPI_CHK(err);
     }
   }
-  err = MPI_Comm_split(comm, color, rank, &subcomm); PROJ2CHK(err);
-  err = Proj2SorterSort_quicksort_recursive(sorter, subcomm, numKeysLocalNew, keysNew); PROJ2CHK(err);
-  err = MPI_Comm_free(&subcomm); PROJ2CHK(err);
+//   err = MPI_Comm_split(comm, color, rank, &subcomm); PROJ2CHK(err);
+//   err = Proj2SorterSort_quicksort_recursive(sorter, subcomm, numKeysLocalNew, keysNew); PROJ2CHK(err);
+//   err = MPI_Comm_free(&subcomm); PROJ2CHK(err);
+  //err = MPI_Comm_split(comm, color, rank, &subcomm); PROJ2CHK(err);
+  err = Proj2SorterSort_quicksort_recursive(sorter, numKeysLocalNew, keysNew, cnt+1); PROJ2CHK(err);
+  // err = MPI_Comm_free(&subcomm); PROJ2CHK(err);
 
   /* Now the array is sorted, but we have to move it back to its original
    * distribution */
@@ -157,12 +161,10 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, MPI_Comm comm
     int lastSend = -1;
     int nRecvs, nSends;
     uint64_t thisOffset;
-
     err = Proj2SorterGetWorkArray(sorter, size + 1, sizeof(uint64_t), &oldOffsets); PROJ2CHK(err);
     err = Proj2SorterGetWorkArray(sorter, size + 1, sizeof(uint64_t), &newOffsets); PROJ2CHK(err);
     err = MPI_Allgather(&myOldCount,1,MPI_UINT64_T,oldOffsets,1,MPI_UINT64_T,comm); PROJ2CHK(err);
     err = MPI_Allgather(&myNewCount,1,MPI_UINT64_T,newOffsets,1,MPI_UINT64_T,comm); PROJ2CHK(err);
-
     oldOffset = 0;
     for (int i = 0; i < size; i++) {
       uint64_t count = oldOffsets[i];
@@ -170,7 +172,6 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, MPI_Comm comm
       oldOffset += count;
     }
     oldOffsets[size] = oldOffset;
-
     newOffset = 0;
     for (int i = 0; i < size; i++) {
       uint64_t count = newOffsets[i];
@@ -178,7 +179,6 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, MPI_Comm comm
       newOffset += count;
     }
     newOffsets[size] = newOffset;
-
     if (myOldCount) {
       for (int i = 0; i < size; i++) {
         if (newOffsets[i] <= oldOffsets[rank] && oldOffsets[rank] < newOffsets[i + 1]) {
@@ -190,15 +190,12 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, MPI_Comm comm
         }
       }
     }
-
     err = Proj2SorterGetWorkArray(sorter, lastRecv - firstRecv, sizeof(*recv_reqs), &recv_reqs); PROJ2CHK(err);
-
     thisOffset = oldOffsets[rank];
     nRecvs = 0;
     for (int i = firstRecv; i < lastRecv; i++) {
       size_t recvStart = thisOffset;
       size_t recvEnd   = newOffsets[i + 1];
-
       if (oldOffsets[rank + 1] < recvEnd) {
         recvEnd = oldOffsets[rank + 1];
       }
@@ -207,7 +204,6 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, MPI_Comm comm
       }
       thisOffset = recvEnd;
     }
-
     if (myNewCount) {
       for (int i = 0; i < size; i++) {
         if (oldOffsets[i] <= newOffsets[rank] && newOffsets[rank] < oldOffsets[i + 1]) {
@@ -219,15 +215,12 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, MPI_Comm comm
         }
       }
     }
-
     err = Proj2SorterGetWorkArray(sorter, lastSend - firstSend, sizeof(*send_reqs), &send_reqs); PROJ2CHK(err);
-
     thisOffset = newOffsets[rank];
     nSends = 0;
     for (int i = firstSend; i < lastSend; i++) {
       size_t sendStart = thisOffset;
       size_t sendEnd   = oldOffsets[i + 1];
-
       if (newOffsets[rank + 1] < sendEnd) {
         sendEnd = newOffsets[rank + 1];
       }
@@ -236,10 +229,8 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, MPI_Comm comm
       }
       thisOffset = sendEnd;
     }
-
     err = MPI_Waitall(nRecvs, recv_reqs, MPI_STATUSES_IGNORE); PROJ2CHK(err);
     err = MPI_Waitall(nSends, send_reqs, MPI_STATUSES_IGNORE); PROJ2CHK(err);
-
     err = Proj2SorterRestoreWorkArray(sorter, lastSend - firstSend, sizeof(*send_reqs), &send_reqs); PROJ2CHK(err);
     err = Proj2SorterRestoreWorkArray(sorter, lastRecv - firstRecv, sizeof(*recv_reqs), &recv_reqs); PROJ2CHK(err);
     err = Proj2SorterRestoreWorkArray(sorter, size + 1, sizeof(uint64_t), &newOffsets); PROJ2CHK(err);
@@ -248,12 +239,14 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, MPI_Comm comm
   err = Proj2SorterRestoreWorkArray(sorter, numKeysLocalNew, sizeof(uint64_t), &keysNew); PROJ2CHK(err);
   return 0;
 }
-
 int Proj2SorterSort_quicksort(Proj2Sorter sorter, size_t numKeysLocal, int uniform, uint64_t *keys)
 {
   int      err;
 
   /* initiate recursive call */
-  err = Proj2SorterSort_quicksort_recursive(sorter, sorter->comm, numKeysLocal, keys); PROJ2CHK(err);
+//   err = Proj2SorterSort_quicksort_recursive(sorter, sorter->comm, numKeysLocal, keys); PROJ2CHK(err);
+  err = Proj2SorterSort_quicksort_recursive(sorter, numKeysLocal, keys, 0); PROJ2CHK(err);
+
   return 0;
-}
+
+} 
