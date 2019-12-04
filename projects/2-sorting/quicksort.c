@@ -2,7 +2,6 @@
 #include <string.h>
 #include "proj2sorter.h"
 #include "proj2sorter_impl.h"
-#include <inttypes.h>
 
 /* A basic strategy to choose a pivot is to have the root broadcast its
  * median entry, and hope it will be close to the median for all processes */

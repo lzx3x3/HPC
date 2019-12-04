@@ -15,7 +15,6 @@ struct _proj2memlink
 struct _proj2sorter
 {
   MPI_Comm     comm;
-  MPI_Comm*    subcomms;
   Proj2MemLink avail;
   Proj2MemLink inUse;
 };

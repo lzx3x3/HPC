@@ -1,4 +1,3 @@
-
 #include <mpi.h>
 #include <stdint.h>
 #include <math.h>
