@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-
 #include "proj2sorter.h"
 #include "proj2sorter_impl.h"
 /* A basic strategy to choose a pivot is to have the root broadcast its
@@ -49,9 +48,14 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, size_t numKey
 
 
 
-  /* sort locally up front */
-  err = Proj2SorterSortLocal(sorter, numKeysLocal, keys, PROJ2SORT_FORWARD); PROJ2CHK(err);
+//   /* sort locally up front */
+//   err = Proj2SorterSortLocal(sorter, numKeysLocal, keys, PROJ2SORT_FORWARD); PROJ2CHK(err);
 
+  /* sort locally at leaf node */
+  if (!cnt)
+  {
+    err = Proj2SorterSortLocal(sorter, numKeysLocal, keys, PROJ2SORT_FORWARD); PROJ2CHK(err);
+  }
 
   if (size == 1) {
     /* base case: nothing to do */
@@ -93,11 +97,12 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, size_t numKey
       int numIncoming;
       err = MPI_Isend(upper_half, (int) upper_size, MPI_UINT64_T, equivRank, PROJ2TAG_QUICKSORT, comm, &sendreq); MPI_CHK(err);
       err = MPI_Probe(equivRank, PROJ2TAG_QUICKSORT, comm, &recvstatus); MPI_CHK(err);
-      err = MPI_Get_count(&recvstatus, MPI_UINT64_T, &numIncoming); MPI_CHK(err);
+      err = MPI_Get_count(&recvstatus, MPI_UINT64_T, &numIncoming); MPI_CHK(err); 
       numKeysLocalNew = lower_size + numIncoming;
       err = Proj2SorterGetWorkArray(sorter, numKeysLocalNew, sizeof(uint64_t), &keysNew); PROJ2CHK(err);
-      memcpy (keysNew, lower_half, lower_size * sizeof(*keysNew));
+//       memcpy (keysNew, lower_half, lower_size * sizeof(*keysNew));
       err = MPI_Recv(&keysNew[lower_size], numIncoming, MPI_UINT64_T, equivRank, PROJ2TAG_QUICKSORT, comm, MPI_STATUS_IGNORE); PROJ2CHK(err);
+      err = Proj2SorterSortLocal_merge(sorter, lower_size, lower_half, numIncoming, keysNew, PROJ2SORT_FORWARD, cnt); MPI_CHK(err);
       err = MPI_Wait(&sendreq, MPI_STATUS_IGNORE); MPI_CHK(err);
     } else {
       int numIncoming;
@@ -106,8 +111,10 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, size_t numKey
       err = MPI_Get_count(&recvstatus, MPI_UINT64_T, &numIncoming); MPI_CHK(err);
       numKeysLocalNew = numIncoming + upper_size;
       err = Proj2SorterGetWorkArray(sorter, numKeysLocalNew, sizeof(uint64_t), &keysNew); PROJ2CHK(err);
-      memcpy (&keysNew[numIncoming], upper_half, upper_size * sizeof(*keysNew));
-      err = MPI_Recv(keysNew, numIncoming, MPI_UINT64_T, equivRank, PROJ2TAG_QUICKSORT, comm, MPI_STATUS_IGNORE); PROJ2CHK(err);
+//       memcpy (&keysNew[numIncoming], upper_half, upper_size * sizeof(*keysNew));
+//       err = MPI_Recv(keysNew, numIncoming, MPI_UINT64_T, equivRank, PROJ2TAG_QUICKSORT, comm, MPI_STATUS_IGNORE); PROJ2CHK(err);
+      err = MPI_Recv(&keysNew[upper_size], numIncoming, MPI_UINT64_T, equivRank, PROJ2TAG_QUICKSORT, comm, MPI_STATUS_IGNORE); PROJ2CHK(err);
+      err = Proj2SorterSortLocal_merge(sorter, upper_size, upper_half, numIncoming, keysNew, PROJ2SORT_FORWARD, cnt); MPI_CHK(err);
       err = MPI_Wait(&sendreq, MPI_STATUS_IGNORE); MPI_CHK(err);
     }
   }
@@ -125,9 +132,11 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, size_t numKey
       err = MPI_Get_count(&recvstatus, MPI_UINT64_T, &numIncoming); MPI_CHK(err);
       numKeysLocalNewNew = numKeysLocalNew + numIncoming;
       err = Proj2SorterGetWorkArray(sorter, numKeysLocalNewNew, sizeof(uint64_t), &keysNewNew); PROJ2CHK(err);
-      memcpy (keysNewNew, keysNew, numKeysLocalNew * sizeof(*keysNewNew));
-      err = Proj2SorterRestoreWorkArray(sorter, numKeysLocalNew, sizeof(uint64_t), &keysNew); PROJ2CHK(err);
+//       memcpy (keysNewNew, keysNew, numKeysLocalNew * sizeof(*keysNewNew));
+//       err = Proj2SorterRestoreWorkArray(sorter, numKeysLocalNew, sizeof(uint64_t), &keysNew); PROJ2CHK(err);
       err = MPI_Recv(&keysNewNew[numKeysLocalNew], numIncoming, MPI_UINT64_T, size - 1, PROJ2TAG_QUICKSORT, comm, MPI_STATUS_IGNORE); PROJ2CHK(err);
+      err = Proj2SorterSortLocal_merge(sorter, numKeysLocalNew, keysNew, numIncoming, keysNewNew, PROJ2SORT_FORWARD, cnt); MPI_CHK(err);
+      err = Proj2SorterRestoreWorkArray(sorter, numKeysLocalNew, sizeof(uint64_t), &keysNew); PROJ2CHK(err);
       numKeysLocalNew = numKeysLocalNewNew;
       keysNew = keysNewNew;
     } else if (rank == (size - 1)) {
