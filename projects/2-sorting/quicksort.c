@@ -2,6 +2,8 @@
 #include <string.h>
 #include "proj2sorter.h"
 #include "proj2sorter_impl.h"
+static size_t numKeysLocalOriginal;
+static uint64_t *keysOriginal;
 /* A basic strategy to choose a pivot is to have the root broadcast its
  * median entry, and hope it will be close to the median for all processes */
 // static int ChoosePivot(Proj2Sorter sorter, MPI_Comm comm, size_t numKeysLocal, uint64_t *keys, uint64_t *pivot_p)
@@ -77,6 +79,117 @@ static int uint64_compare_pair(const void *key, const void *array)
 }
 
 
+static int redistributeArray(Proj2Sorter sorter, MPI_Comm comm, uint64_t numKeysLocal, uint64_t numKeysLocalNew, uint64_t *keys, uint64_t *keysNew)
+{
+  uint64_t myOldCount = numKeysLocal;
+  uint64_t myNewCount = numKeysLocalNew;
+  uint64_t *oldOffsets;
+  uint64_t *newOffsets;
+  uint64_t oldOffset, newOffset;
+  MPI_Request *recv_reqs, *send_reqs;
+  int firstRecv = -1;
+  int lastRecv = -1;
+  int firstSend = -1;
+  int lastSend = -1;
+  int nRecvs, nSends;
+  uint64_t thisOffset;
+
+  int err, size, rank;
+
+  err = MPI_Comm_size(comm, &size); PROJ2CHK(err);
+  err = MPI_Comm_rank(comm, &rank); PROJ2CHK(err);
+
+  err = Proj2SorterGetWorkArray(sorter, size + 1, sizeof(uint64_t), &oldOffsets); PROJ2CHK(err);
+  err = Proj2SorterGetWorkArray(sorter, size + 1, sizeof(uint64_t), &newOffsets); PROJ2CHK(err);
+  err = MPI_Allgather(&myOldCount,1,MPI_UINT64_T,oldOffsets,1,MPI_UINT64_T,comm); PROJ2CHK(err);
+  err = MPI_Allgather(&myNewCount,1,MPI_UINT64_T,newOffsets,1,MPI_UINT64_T,comm); PROJ2CHK(err);
+
+  oldOffset = 0;
+  for (int i = 0; i < size; i++) {
+    uint64_t count = oldOffsets[i];
+    oldOffsets[i] = oldOffset;
+    oldOffset += count;
+  }
+  oldOffsets[size] = oldOffset;
+
+  newOffset = 0;
+  for (int i = 0; i < size; i++) {
+    uint64_t count = newOffsets[i];
+    newOffsets[i] = newOffset;
+    newOffset += count;
+  }
+  newOffsets[size] = newOffset;
+
+  if (myOldCount) {
+    for (int i = 0; i < size; i++) {
+      if (newOffsets[i] <= oldOffsets[rank] && oldOffsets[rank] < newOffsets[i + 1]) {
+        firstRecv = i;
+      }
+      if (newOffsets[i] <= oldOffsets[rank + 1] - 1 && oldOffsets[rank + 1] - 1 < newOffsets[i + 1]) {
+        lastRecv = i + 1;
+        break;
+      }
+    }
+  }
+
+  err = Proj2SorterGetWorkArray(sorter, lastRecv - firstRecv, sizeof(*recv_reqs), &recv_reqs); PROJ2CHK(err);
+
+  thisOffset = oldOffsets[rank];
+  nRecvs = 0;
+  for (int i = firstRecv; i < lastRecv; i++) {
+    size_t recvStart = thisOffset;
+    size_t recvEnd   = newOffsets[i + 1];
+
+    if (oldOffsets[rank + 1] < recvEnd) {
+      recvEnd = oldOffsets[rank + 1];
+    }
+    if (recvEnd > recvStart) {
+      err = MPI_Irecv(&keys[thisOffset - oldOffsets[rank]],(int) (recvEnd - recvStart), MPI_UINT64_T, i, PROJ2TAG_QUICKSORT, comm, &recv_reqs[nRecvs++]); MPI_CHK(err);
+    }
+    thisOffset = recvEnd;
+  }
+
+  if (myNewCount) {
+    for (int i = 0; i < size; i++) {
+      if (oldOffsets[i] <= newOffsets[rank] && newOffsets[rank] < oldOffsets[i + 1]) {
+        firstSend = i;
+      }
+      if (oldOffsets[i] <= newOffsets[rank + 1] - 1 && newOffsets[rank + 1] - 1 < oldOffsets[i + 1]) {
+        lastSend = i + 1;
+        break;
+      }
+    }
+  }
+
+  err = Proj2SorterGetWorkArray(sorter, lastSend - firstSend, sizeof(*send_reqs), &send_reqs); PROJ2CHK(err);
+
+  thisOffset = newOffsets[rank];
+  nSends = 0;
+  for (int i = firstSend; i < lastSend; i++) {
+    size_t sendStart = thisOffset;
+    size_t sendEnd   = oldOffsets[i + 1];
+
+    if (newOffsets[rank + 1] < sendEnd) {
+      sendEnd = newOffsets[rank + 1];
+    }
+    if (sendEnd > sendStart) {
+      err = MPI_Isend(&keysNew[thisOffset - newOffsets[rank]],(int) (sendEnd - sendStart), MPI_UINT64_T, i, PROJ2TAG_QUICKSORT, comm, &send_reqs[nSends++]); MPI_CHK(err);
+    }
+    thisOffset = sendEnd;
+  }
+
+  err = MPI_Waitall(nRecvs, recv_reqs, MPI_STATUSES_IGNORE); PROJ2CHK(err);
+  err = MPI_Waitall(nSends, send_reqs, MPI_STATUSES_IGNORE); PROJ2CHK(err);
+
+  err = Proj2SorterRestoreWorkArray(sorter, lastSend - firstSend, sizeof(*send_reqs), &send_reqs); PROJ2CHK(err);
+  err = Proj2SorterRestoreWorkArray(sorter, lastRecv - firstRecv, sizeof(*recv_reqs), &recv_reqs); PROJ2CHK(err);
+  err = Proj2SorterRestoreWorkArray(sorter, size + 1, sizeof(uint64_t), &newOffsets); PROJ2CHK(err);
+  err = Proj2SorterRestoreWorkArray(sorter, size + 1, sizeof(uint64_t), &oldOffsets); PROJ2CHK(err);
+  return 0;
+}
+
+
+
 static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, size_t numKeysLocal, uint64_t *keys, int cnt)
 {
   uint64_t pivot = 0;
@@ -109,6 +222,10 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, size_t numKey
 
   if (size == 1) {
     /* base case: nothing to do */
+      
+      
+    err = redistributeArray(sorter, sorter->comm, numKeysLocalOriginal,numKeysLocal, keysOriginal, keys); PROJ2CHK(err);
+
     return 0;
   }
 //   err = ChoosePivot(sorter, comm, numKeysLocal, keys, &pivot); PROJ2CHK(err);
@@ -206,102 +323,104 @@ static int Proj2SorterSort_quicksort_recursive(Proj2Sorter sorter, size_t numKey
   err = Proj2SorterSort_quicksort_recursive(sorter, numKeysLocalNew, keysNew, cnt+1); PROJ2CHK(err);
   // err = MPI_Comm_free(&subcomm); PROJ2CHK(err);
 
-  /* Now the array is sorted, but we have to move it back to its original
-   * distribution */
-  {
-    uint64_t myOldCount = numKeysLocal;
-    uint64_t myNewCount = numKeysLocalNew;
-    uint64_t *oldOffsets;
-    uint64_t *newOffsets;
-    uint64_t oldOffset, newOffset;
-    MPI_Request *recv_reqs, *send_reqs;
-    int firstRecv = -1;
-    int lastRecv = -1;
-    int firstSend = -1;
-    int lastSend = -1;
-    int nRecvs, nSends;
-    uint64_t thisOffset;
-    err = Proj2SorterGetWorkArray(sorter, size + 1, sizeof(uint64_t), &oldOffsets); PROJ2CHK(err);
-    err = Proj2SorterGetWorkArray(sorter, size + 1, sizeof(uint64_t), &newOffsets); PROJ2CHK(err);
-    err = MPI_Allgather(&myOldCount,1,MPI_UINT64_T,oldOffsets,1,MPI_UINT64_T,comm); PROJ2CHK(err);
-    err = MPI_Allgather(&myNewCount,1,MPI_UINT64_T,newOffsets,1,MPI_UINT64_T,comm); PROJ2CHK(err);
-    oldOffset = 0;
-    for (int i = 0; i < size; i++) {
-      uint64_t count = oldOffsets[i];
-      oldOffsets[i] = oldOffset;
-      oldOffset += count;
-    }
-    oldOffsets[size] = oldOffset;
-    newOffset = 0;
-    for (int i = 0; i < size; i++) {
-      uint64_t count = newOffsets[i];
-      newOffsets[i] = newOffset;
-      newOffset += count;
-    }
-    newOffsets[size] = newOffset;
-    if (myOldCount) {
-      for (int i = 0; i < size; i++) {
-        if (newOffsets[i] <= oldOffsets[rank] && oldOffsets[rank] < newOffsets[i + 1]) {
-          firstRecv = i;
-        }
-        if (newOffsets[i] <= oldOffsets[rank + 1] - 1 && oldOffsets[rank + 1] - 1 < newOffsets[i + 1]) {
-          lastRecv = i + 1;
-          break;
-        }
-      }
-    }
-    err = Proj2SorterGetWorkArray(sorter, lastRecv - firstRecv, sizeof(*recv_reqs), &recv_reqs); PROJ2CHK(err);
-    thisOffset = oldOffsets[rank];
-    nRecvs = 0;
-    for (int i = firstRecv; i < lastRecv; i++) {
-      size_t recvStart = thisOffset;
-      size_t recvEnd   = newOffsets[i + 1];
-      if (oldOffsets[rank + 1] < recvEnd) {
-        recvEnd = oldOffsets[rank + 1];
-      }
-      if (recvEnd > recvStart) {
-        err = MPI_Irecv(&keys[thisOffset - oldOffsets[rank]],(int) (recvEnd - recvStart), MPI_UINT64_T, i, PROJ2TAG_QUICKSORT, comm, &recv_reqs[nRecvs++]); MPI_CHK(err);
-      }
-      thisOffset = recvEnd;
-    }
-    if (myNewCount) {
-      for (int i = 0; i < size; i++) {
-        if (oldOffsets[i] <= newOffsets[rank] && newOffsets[rank] < oldOffsets[i + 1]) {
-          firstSend = i;
-        }
-        if (oldOffsets[i] <= newOffsets[rank + 1] - 1 && newOffsets[rank + 1] - 1 < oldOffsets[i + 1]) {
-          lastSend = i + 1;
-          break;
-        }
-      }
-    }
-    err = Proj2SorterGetWorkArray(sorter, lastSend - firstSend, sizeof(*send_reqs), &send_reqs); PROJ2CHK(err);
-    thisOffset = newOffsets[rank];
-    nSends = 0;
-    for (int i = firstSend; i < lastSend; i++) {
-      size_t sendStart = thisOffset;
-      size_t sendEnd   = oldOffsets[i + 1];
-      if (newOffsets[rank + 1] < sendEnd) {
-        sendEnd = newOffsets[rank + 1];
-      }
-      if (sendEnd > sendStart) {
-        err = MPI_Isend(&keysNew[thisOffset - newOffsets[rank]],(int) (sendEnd - sendStart), MPI_UINT64_T, i, PROJ2TAG_QUICKSORT, comm, &send_reqs[nSends++]); MPI_CHK(err);
-      }
-      thisOffset = sendEnd;
-    }
-    err = MPI_Waitall(nRecvs, recv_reqs, MPI_STATUSES_IGNORE); PROJ2CHK(err);
-    err = MPI_Waitall(nSends, send_reqs, MPI_STATUSES_IGNORE); PROJ2CHK(err);
-    err = Proj2SorterRestoreWorkArray(sorter, lastSend - firstSend, sizeof(*send_reqs), &send_reqs); PROJ2CHK(err);
-    err = Proj2SorterRestoreWorkArray(sorter, lastRecv - firstRecv, sizeof(*recv_reqs), &recv_reqs); PROJ2CHK(err);
-    err = Proj2SorterRestoreWorkArray(sorter, size + 1, sizeof(uint64_t), &newOffsets); PROJ2CHK(err);
-    err = Proj2SorterRestoreWorkArray(sorter, size + 1, sizeof(uint64_t), &oldOffsets); PROJ2CHK(err);
-  }
+//   /* Now the array is sorted, but we have to move it back to its original
+//    * distribution */
+//   {
+//     uint64_t myOldCount = numKeysLocal;
+//     uint64_t myNewCount = numKeysLocalNew;
+//     uint64_t *oldOffsets;
+//     uint64_t *newOffsets;
+//     uint64_t oldOffset, newOffset;
+//     MPI_Request *recv_reqs, *send_reqs;
+//     int firstRecv = -1;
+//     int lastRecv = -1;
+//     int firstSend = -1;
+//     int lastSend = -1;
+//     int nRecvs, nSends;
+//     uint64_t thisOffset;
+//     err = Proj2SorterGetWorkArray(sorter, size + 1, sizeof(uint64_t), &oldOffsets); PROJ2CHK(err);
+//     err = Proj2SorterGetWorkArray(sorter, size + 1, sizeof(uint64_t), &newOffsets); PROJ2CHK(err);
+//     err = MPI_Allgather(&myOldCount,1,MPI_UINT64_T,oldOffsets,1,MPI_UINT64_T,comm); PROJ2CHK(err);
+//     err = MPI_Allgather(&myNewCount,1,MPI_UINT64_T,newOffsets,1,MPI_UINT64_T,comm); PROJ2CHK(err);
+//     oldOffset = 0;
+//     for (int i = 0; i < size; i++) {
+//       uint64_t count = oldOffsets[i];
+//       oldOffsets[i] = oldOffset;
+//       oldOffset += count;
+//     }
+//     oldOffsets[size] = oldOffset;
+//     newOffset = 0;
+//     for (int i = 0; i < size; i++) {
+//       uint64_t count = newOffsets[i];
+//       newOffsets[i] = newOffset;
+//       newOffset += count;
+//     }
+//     newOffsets[size] = newOffset;
+//     if (myOldCount) {
+//       for (int i = 0; i < size; i++) {
+//         if (newOffsets[i] <= oldOffsets[rank] && oldOffsets[rank] < newOffsets[i + 1]) {
+//           firstRecv = i;
+//         }
+//         if (newOffsets[i] <= oldOffsets[rank + 1] - 1 && oldOffsets[rank + 1] - 1 < newOffsets[i + 1]) {
+//           lastRecv = i + 1;
+//           break;
+//         }
+//       }
+//     }
+//     err = Proj2SorterGetWorkArray(sorter, lastRecv - firstRecv, sizeof(*recv_reqs), &recv_reqs); PROJ2CHK(err);
+//     thisOffset = oldOffsets[rank];
+//     nRecvs = 0;
+//     for (int i = firstRecv; i < lastRecv; i++) {
+//       size_t recvStart = thisOffset;
+//       size_t recvEnd   = newOffsets[i + 1];
+//       if (oldOffsets[rank + 1] < recvEnd) {
+//         recvEnd = oldOffsets[rank + 1];
+//       }
+//       if (recvEnd > recvStart) {
+//         err = MPI_Irecv(&keys[thisOffset - oldOffsets[rank]],(int) (recvEnd - recvStart), MPI_UINT64_T, i, PROJ2TAG_QUICKSORT, comm, &recv_reqs[nRecvs++]); MPI_CHK(err);
+//       }
+//       thisOffset = recvEnd;
+//     }
+//     if (myNewCount) {
+//       for (int i = 0; i < size; i++) {
+//         if (oldOffsets[i] <= newOffsets[rank] && newOffsets[rank] < oldOffsets[i + 1]) {
+//           firstSend = i;
+//         }
+//         if (oldOffsets[i] <= newOffsets[rank + 1] - 1 && newOffsets[rank + 1] - 1 < oldOffsets[i + 1]) {
+//           lastSend = i + 1;
+//           break;
+//         }
+//       }
+//     }
+//     err = Proj2SorterGetWorkArray(sorter, lastSend - firstSend, sizeof(*send_reqs), &send_reqs); PROJ2CHK(err);
+//     thisOffset = newOffsets[rank];
+//     nSends = 0;
+//     for (int i = firstSend; i < lastSend; i++) {
+//       size_t sendStart = thisOffset;
+//       size_t sendEnd   = oldOffsets[i + 1];
+//       if (newOffsets[rank + 1] < sendEnd) {
+//         sendEnd = newOffsets[rank + 1];
+//       }
+//       if (sendEnd > sendStart) {
+//         err = MPI_Isend(&keysNew[thisOffset - newOffsets[rank]],(int) (sendEnd - sendStart), MPI_UINT64_T, i, PROJ2TAG_QUICKSORT, comm, &send_reqs[nSends++]); MPI_CHK(err);
+//       }
+//       thisOffset = sendEnd;
+//     }
+//     err = MPI_Waitall(nRecvs, recv_reqs, MPI_STATUSES_IGNORE); PROJ2CHK(err);
+//     err = MPI_Waitall(nSends, send_reqs, MPI_STATUSES_IGNORE); PROJ2CHK(err);
+//     err = Proj2SorterRestoreWorkArray(sorter, lastSend - firstSend, sizeof(*send_reqs), &send_reqs); PROJ2CHK(err);
+//     err = Proj2SorterRestoreWorkArray(sorter, lastRecv - firstRecv, sizeof(*recv_reqs), &recv_reqs); PROJ2CHK(err);
+//     err = Proj2SorterRestoreWorkArray(sorter, size + 1, sizeof(uint64_t), &newOffsets); PROJ2CHK(err);
+//     err = Proj2SorterRestoreWorkArray(sorter, size + 1, sizeof(uint64_t), &oldOffsets); PROJ2CHK(err);
+//   }
   err = Proj2SorterRestoreWorkArray(sorter, numKeysLocalNew, sizeof(uint64_t), &keysNew); PROJ2CHK(err);
   return 0;
 }
 int Proj2SorterSort_quicksort(Proj2Sorter sorter, size_t numKeysLocal, int uniform, uint64_t *keys)
 {
   int      err;
+  numKeysLocalOriginal = numKeysLocal;
+  keysOriginal = keys;
 
   /* initiate recursive call */
 //   err = Proj2SorterSort_quicksort_recursive(sorter, sorter->comm, numKeysLocal, keys); PROJ2CHK(err);
