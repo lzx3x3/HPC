@@ -61,11 +61,12 @@ TOUCH        = touch
 # - Platform identifier ------------------------------------------------
 # ----------------------------------------------------------------------
 #
-ARCH         = $(arch)
+ARCH         = Linux
 #
 # ----------------------------------------------------------------------
 # - HPL Directory Structure / HPL library ------------------------------
 # ----------------------------------------------------------------------
+
 #
 TOPdir       = $(HOME)/cse6230/final/hpl/hpl-2.3
 INCdir       = $(TOPdir)/include
@@ -81,10 +82,9 @@ HPLlib       = $(LIBdir)/libhpl.a
 # header files,  MPlib  is defined  to be the name of  the library to be 
 # used. The variable MPdir is only used for defining MPinc and MPlib.
 #
-#
-MPdir        = /nv/coc-ice/tisaac3/opt/pace-ice/mvapich2/2.3
-MPinc        = -I $(MPdir)/include
-MPlib        = $(MPdir)/lib/libmpich.so
+MPdir        = /usr/local/pacerepov1/intel/compiler/16.0/impi/5.1.1.109
+MPinc        = -I $(MPdir)/include64
+MPlib        = $(MPdir)/intel64/lib/libmpi_mt.so
 #
 # ----------------------------------------------------------------------
 # - Linear Algebra library (BLAS or VSIPL) -----------------------------
@@ -94,9 +94,18 @@ MPlib        = $(MPdir)/lib/libmpich.so
 # used. The variable LAdir is only used for defining LAinc and LAlib.
 #
 
-LAdir        = /nv/coc-ice/mguo34/cse6230/final/hpl/BLAS-3.8.0
-LAinc        = 
-LAlib        = $(LAdir)/libfblas.a
+LAdir        = $(MKLROOT)
+ifndef  LAinc
+LAinc        = -I $(LAdir)/include/
+endif
+ifndef  LAlib
+LAlib        = -L$(LAdir)/lib/intel64 \
+               -Wl,--start-group \
+               $(LAdir)/lib/intel64/libmkl_intel_lp64.a \
+               $(LAdir)/lib/intel64/libmkl_intel_thread.a \
+               $(LAdir)/lib/intel64/libmkl_core.a \
+               -Wl,--end-group -lpthread -ldl
+endif
 #
 # ----------------------------------------------------------------------
 # - F77 / C interface --------------------------------------------------
@@ -168,13 +177,17 @@ HPL_DEFS     = $(F2CDEFS) $(HPL_OPTS) $(HPL_INCLUDES)
 # - Compilers / linkers - Optimization flags ---------------------------
 # ----------------------------------------------------------------------
 #
-CC           = mpicc
-CCNOOPT      = $(HPL_DEFS) 
-CCFLAGS      = $(HPL_DEFS) 
+CC       = mpiicc
+CCNOOPT  = $(HPL_DEFS)
+OMP_DEFS = -qopenmp
+CCFLAGS  = $(HPL_DEFS) -O3 -w -ansi-alias -i-static -z noexecstack -z relro -z now -nocompchk
 #
-LINKER       = mpif77
-LINKFLAGS    = 
-#
+## On some platforms,  it is necessary  to use the Fortran linker to find
+## the Fortran internals used in the BLAS library.
+##
+LINKER       = $(CC)
+LINKFLAGS    = $(CCFLAGS) $(OMP_DEFS) -mt_mpi
+##
 ARCHIVER     = ar
 ARFLAGS      = r
 RANLIB       = echo
